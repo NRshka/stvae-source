@@ -1,4 +1,5 @@
-from torch.nn import Module
+from torch.nn import Module, Sequential, Linear, BatchNorm1d
+from torch.nn import LeakyReLU, LogSoftmax
 from torch import rand, add, floor
 from torch import LongTensor
 
@@ -24,3 +25,27 @@ class BatchSwapNoise(Module):
             return x.view(-1)[idx].view(x.size())
         else:
             return x
+
+
+class Latent_discriminator(Module):
+     def __init__(self, bottleneck: int, ohe_latent_dim: int):
+        assert bottleneck > 0, ValueError(f"A bottleneck dimension can't be negative: {bottleneck}")
+        assert isinstance(bottleneck, int), TypeError("INT!")
+        assert ohe_latent_dim > 0, ValueError(f"A dimension can't be negative: {ohe_latent_dim}")
+        assert isinstance(ohe_latent_dim, int), TypeError("INT!")
+        
+        super(Latent_discriminator,self).__init__()
+        
+        self.model = Sequential(
+            Linear(bottleneck, 1024, bias=False),
+            BatchNorm1d(1024),
+            LeakyReLU(0.2, inplace=True),
+            Linear(1024, 1024, bias=False),
+            BatchNorm1d(1024),
+            LeakyReLU(0.2, inplace=True),
+            Linear(1024, ohe_latent_dim, bias=False),
+            LogSoftmax(dim=-1))
+    
+    
+     def forward(self,x):
+        return self.model(x)
