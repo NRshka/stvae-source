@@ -4,6 +4,7 @@
 '''
 from torch import mean, exp
 from torch import save as torch_save
+from torch.nn import NLLLoss
 from torch.nn.utils import clip_grad_norm_
 from torch.optim.lr_scheduler import ExponentialLR
 
@@ -18,8 +19,7 @@ from .data.utils import create_random_classes, add_noise
 class VAELearn:
     def __init__(self, vae_model, disc_model, noise_beta: float, 
                  decay_beta: float = 1.0, ae_lr=1e-4, disc_lr=1e-4,
-                 vae_beta: float = 1e-4,
-                 verbose: str = "stdout", save_dir: str = None):
+                 vae_beta: float = 1e-4, save_dir: str = None):
         assert noise_beta >= 0, ValueError("Noise beta decay can't be negative")
         assert decay_beta >= 0, ValueError("Beta decay can't be negative")
         
@@ -39,7 +39,7 @@ class VAELearn:
         
         assert isinstance(vae_beta, (float, int)), TypeError("vae_beta param must be int or float")
         self.loss_function = get_variational_loss(vae_beta)
-        self.verbose = verbose
+        self.discrim_loss = NLLLoss()
         
         if save_dir:
             assert os.path.isdir(save_dir), ValueError(f"{save_dir} directory does't exists.")
@@ -52,9 +52,11 @@ class VAELearn:
                                                  cyclic_weight: float = 0.2, 
                                                  adv_weight: float = 0.07, 
                                                  clip_value: float = 1.,
-                                                 log_interval: int = 1):
+                                                 log_interval: int = 1,
+                                                 verbose: str = "silent"):
         train_loss = 0
         noise_beta = self.noise_beta * self.decay_beta
+        val_class_ohe_np = val_class_ohe_tensor.cpu().detach().numpy()
         for batch_idx, (data, ohe) in enumerate(dataloader):
             data = data.cuda()
             ohe = ohe.cuda()
@@ -110,9 +112,9 @@ class VAELearn:
                     reconstruction_loss_val = self.loss_function.reconstruction_loss(recon_val, val_expression_tensor)
 
                     discrim_preds_val = self.latent_discrim(latents_val)
-                    discrim_loss_val = discrim_loss(discrim_preds_val.detach(), val_class_ohe_tensor.argmax(1))
+                    discrim_loss_val = self.discrim_loss(discrim_preds_val.detach(), val_class_ohe_tensor.argmax(1))
                     discrim_preds_val_np = discrim_preds_val.cpu().detach().numpy()
-                    discrim_val_acc = (val_class_ohe.argmax(1) == discrim_preds_val_np.argmax(1)).mean()
+                    discrim_val_acc = (val_class_ohe_np.argmax(1) == discrim_preds_val_np.argmax(1)).mean()
 
                     #first style transfer
                     transfer_classes_val = create_random_classes(val_expression_tensor.shape[0],
@@ -125,7 +127,7 @@ class VAELearn:
                     cyclic_loss_val = self.loss_function.reconstruction_loss(b2a_expression, val_expression_tensor)
 
 
-                    if self.verbose == "stdout" or self.verbose == "all":
+                    if verbose == "stdout" or verbose == "all":
                         print('Train Epoch: {} [{}/{} ({:.0f}%)]\t Reconstruction loss: {:.6f} \tCyclic loss: {:.6f} \tDiscrimLoss: {:.6f}'.format(
                             epoch, batch_idx * len(data), len(dataloader.dataset),
                             100. * batch_idx / len(dataloader),
@@ -151,10 +153,10 @@ class VAELearn:
                 mu, logvar = self.model.encode(data, ohe)
                 latents = self.model.reparameterize(mu, logvar)
                 noisy_latents = add_noise(latents, noise_beta)
-                adv_loss_d = self.discrim_loss(latent_discrim(noisy_latents.detach()), ohe.argmax(1))
+                adv_loss_d = self.discrim_loss(self.latent_discrim(noisy_latents.detach()), ohe.argmax(1))
 
                 adv_loss_d.backward()
-                clip_grad_norm_(latent_discrim.parameters(), clip_value)
+                clip_grad_norm_(self.latent_discrim.parameters(), clip_value)
                 self.optimizer_discrim.step()
                 self.latent_discrim_scheduler.step()
 
