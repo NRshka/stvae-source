@@ -16,6 +16,6 @@ def get_variational_loss():
 
         return rec_loss_ + vae_beta*KLD
     
-    loss_function.reconstruction_loss = nn.MSELoss(reduction='mean')
+    loss_function.reconstruction_loss = MSELoss(reduction='mean')
     
     return loss_function

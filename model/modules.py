@@ -36,7 +36,7 @@ class Latent_discriminator(Module):
         assert bottleneck > 0, ValueError(f"A bottleneck dimension can't be negative: {bottleneck}")
         assert isinstance(bottleneck, int), TypeError("INT!")
         assert count_classes > 0, ValueError(f"A dimension can't be negative: {count_classes}")
-        assert isinstance(ohe_latent_dim, int), TypeError("INT!")
+        assert isinstance(count_classes, int), TypeError("INT!")
         
         super(Latent_discriminator,self).__init__()
         

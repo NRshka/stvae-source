@@ -10,6 +10,7 @@ from torch.optim.lr_scheduler import ExponentialLR
 import os
 
 from .model.autoencoders import VAE
+from .model.modules import RAdam
 from .model.losses import get_variational_loss
 from .data.utils import create_random_classes, add_noise
 
@@ -32,13 +33,14 @@ class VAELearn:
         
         self.optimizer = RAdam(self.model.parameters(), lr=ae_lr, weight_decay=1e-3)
         self.optimizer_discrim = RAdam(self.latent_discrim.parameters(), lr=disc_lr)
-        self.model_scheduler =  ExponentialLR(optimizer, gamma=0.992)
-        self.latent_discrim_scheduler = ExponentialLR(optimizer_discrim, gamma=0.992)
+        self.model_scheduler =  ExponentialLR(self.optimizer, gamma=0.992)
+        self.latent_discrim_scheduler = ExponentialLR(self.optimizer_discrim, gamma=0.992)
         
         self.loss_function = get_variational_loss()
         self.verbose = verbose
         
-        assert os.path.isdir(save_dir), ValueError(f"{save_dir} directory does't exists.")
+        if save_dir:
+            assert os.path.isdir(save_dir), ValueError(f"{save_dir} directory does't exists.")
         self.save_dir = save_dir
     
     
