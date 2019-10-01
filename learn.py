@@ -18,6 +18,7 @@ from .data.utils import create_random_classes, add_noise
 class VAELearn:
     def __init__(self, vae_model, disc_model, noise_beta: float, 
                  decay_beta: float = 1.0, ae_lr=1e-4, disc_lr=1e-4,
+                 vae_beta: float = 1e-4,
                  verbose: str = "stdout", save_dir: str = None):
         assert noise_beta >= 0, ValueError("Noise beta decay can't be negative")
         assert decay_beta >= 0, ValueError("Beta decay can't be negative")
@@ -36,7 +37,8 @@ class VAELearn:
         self.model_scheduler =  ExponentialLR(self.optimizer, gamma=0.992)
         self.latent_discrim_scheduler = ExponentialLR(self.optimizer_discrim, gamma=0.992)
         
-        self.loss_function = get_variational_loss()
+        assert isinstance(vae_beta, (float, int)), TypeError("vae_beta param must be int or float")
+        self.loss_function = get_variational_loss(vae_beta)
         self.verbose = verbose
         
         if save_dir:
@@ -44,14 +46,20 @@ class VAELearn:
         self.save_dir = save_dir
     
     
-    def train_with_reconstruction_and_cycle_loss(epoch, dataloader):
+    def train_with_reconstruction_and_cycle_loss(self, epoch, dataloader, 
+                                                 val_expression_tensor,
+                                                 val_class_ohe_tensor,
+                                                 cyclic_weight: float = 0.2, 
+                                                 adv_weight: float = 0.07, 
+                                                 clip_value: float = 1.,
+                                                 log_interval: int = 1):
         train_loss = 0
         noise_beta = self.noise_beta * self.decay_beta
         for batch_idx, (data, ohe) in enumerate(dataloader):
             data = data.cuda()
             ohe = ohe.cuda()
             #Autoencoder training
-            if batch_idx%2==0:
+            if batch_idx % 2 == 0:
                 self.model.train()
                 self.latent_discrim.eval()
 
@@ -65,7 +73,7 @@ class VAELearn:
                 reconstruction_loss_on_batch = self.loss_function(a2a_expression, data, a2b_mu, a2b_logvar)
 
                 #first style transfer
-                transfer_classes = create_random_classes(batch_size, ohe.shape[1]).cuda()
+                transfer_classes = create_random_classes(data.size()[0], ohe.shape[1]).cuda()
                 a2b_expression = self.model.decode(a2b_latents, transfer_classes)
                 #second style transfer
                 b2a_mu, b2a_logvar = self.model.encode(a2b_expression, transfer_classes)
@@ -90,7 +98,8 @@ class VAELearn:
                 train_loss += loss.item()
                 #Clip gradient
                 clip_grad_norm_(self.model.parameters(), clip_value)
-                optimizer.step()
+                self.optimizer.step()
+                self.model_scheduler.step()
                 
                 if batch_idx % log_interval == 0:
                     self.model.eval()
@@ -147,7 +156,8 @@ class VAELearn:
                 adv_loss_d.backward()
                 clip_grad_norm_(latent_discrim.parameters(), clip_value)
                 self.optimizer_discrim.step()
+                self.latent_discrim_scheduler.step()
 
 
-        self.model_scheduler.step()
-        self.latent_discrim_scheduler.step()
+        #self.model_scheduler.step()
+        #self.latent_discrim_scheduler.step()
