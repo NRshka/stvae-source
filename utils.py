@@ -59,3 +59,20 @@ def init_weights(modules):
         if isinstance(m, torch.nn.Conv1d):
             torch.nn.init.xavier_normal_(m.weight.data)
             m.bias.data.zero_()
+
+
+def to_device(obj, device=None):
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    if isinstance(obj, (list, tuple)):
+        return [to_device(o, device) for o in obj]
+
+    if isinstance(obj, dict):
+        return {k: to_device(o, device) for k, o in obj.items()}
+
+    if isinstance(obj, np.ndarray):
+        obj = torch.from_numpy(obj)
+
+    obj = obj.to(device)
+    return obj
