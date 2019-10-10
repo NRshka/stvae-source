@@ -1,3 +1,6 @@
 dataclasses
 torch
 pytorch-ignite
+dataclasses
+numpy
+pandas
