@@ -4,7 +4,7 @@ from pathlib import Path
 from utils import save_pickle, load_pickle
 
 
-class Experiment(object):
+class Experiment:
     _CONFIG_FILENAME = 'config.pkl'
 
     def __init__(self, experiments_dir, config, prefix=None):
@@ -20,6 +20,10 @@ class Experiment(object):
         self.experiment_id = None
 
     def __enter__(self):
+        #check if dir exists
+        if not self.experiments_dir.is_dir():
+            self.experiments_dir.mkdir(parents=True, exist_ok=True)
+        
         self.experiment_dir = Path(tempfile.mkdtemp(dir=self.experiments_dir, prefix=self.prefix))
         self.experiment_id = self.experiment_dir.name
 
@@ -46,6 +50,7 @@ class Experiment(object):
     @classmethod
     def _save_config(cls, config, experiment_dir):
         filename = experiment_dir.joinpath(Experiment._CONFIG_FILENAME)
+                
         save_pickle(config, filename)
 
     @classmethod
