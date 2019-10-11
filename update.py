@@ -1,23 +1,20 @@
 from ignite.engine import _prepare_batch
 from torch import mean, exp
-from torch import save as torch_save
+#from torch import save as torch_save
 from torch.nn import NLLLoss
 from torch.nn.utils import clip_grad_norm_
 from torch.optim.lr_scheduler import ExponentialLR
 
-import os
-
-from .model.autoencoders import VAE
-from .model.modules import RAdam
-from .model.losses import get_variational_loss
-from .data.utils import create_random_classes, add_noise
+from model import RAdam
+from model.losses import get_variational_loss
+from data.utils import create_random_classes, add_noise
 
 
 class VAEUpdater:
     '''
 
     '''
-    def __init__(self, cfg, vae_model, disc, device=None):
+    def __init__(self, vae_model, disc, cfg, device=None, train=True):
         self.cfg = cfg
         self.noise_beta = self.cfg.noise_beta
 
@@ -29,18 +26,19 @@ class VAEUpdater:
         self.model_scheduler =  ExponentialLR(self.optimizer, gamma=0.992)
         self.latent_discrim_scheduler = ExponentialLR(self.optimizer_discrim, gamma=0.992)
 
-        self.loss_function = get_variational_loss(vae_beta)
+        self.loss_function = get_variational_loss(self.cfg.vae_beta)
         self.discrim_loss = NLLLoss()
 
         self.device = device
 
 
-    def step(self, engine, batch):
+    def __call__(self, engine, batch):
+        engine.iteration += 1
         self.noise_beta = self.noise_beta * self.cfg.decay_beta
 
         data, ohe = _prepare_batch(batch, device=self.device)
         #Autoencoder training
-        if self.batch_idx % 2 == 0:
+        if engine.iteration % 2 == 0:
             self.model.train()
             self.latent_discrim.eval()
 
@@ -55,7 +53,7 @@ class VAEUpdater:
             #first style transfer
             transfer_classes = create_random_classes(data.size()[0], ohe.shape[1]).cuda()
             a2b_expression = self.model.decode(a2b_latents, transfer_classes)
-            second style transfer
+            #second style transfer
             b2a_mu, b2a_logvar = self.model.encode(a2b_expression, transfer_classes)
             b2a_latents = self.model.reparameterize(b2a_mu, b2a_logvar)
             b2a_expression = self.model.decode(b2a_latents, ohe)
@@ -66,21 +64,21 @@ class VAEUpdater:
             latents = self.model.reparameterize(mu, logvar)
             #adv_loss_g = discrim_loss(latent_discrim(latents), ohe.argmax(1))
             #loss-=20.*adv_loss_g
-            noisy_latents = add_noise(latents, noise_beta)
+            noisy_latents = add_noise(latents, self.noise_beta)
             discrim_preds = self.latent_discrim(noisy_latents)
             #shannon entropy
             adv_loss_g = mean(discrim_preds * exp(discrim_preds))
 
-            loss = reconstruction_loss_on_batch + cyclic_weight*cyclic_loss_on_batch + adv_weight*adv_loss_g
+            loss = reconstruction_loss_on_batch + self.cfg.cyclic_weight*cyclic_loss_on_batch + self.cfg.adv_weight*adv_loss_g
 
             loss.backward()
-            train_loss += loss.item()
+            engine.state.adversarial_loss = loss.item()
             #Clip gradient
-            clip_grad_norm_(self.model.parameters(), clip_value)
+            clip_grad_norm_(self.model.parameters(), self.cfg.clip_value)
             self.optimizer.step()
             self.model_scheduler.step()
         
-        elif self.batch_idx % 2 == 1:
+        elif engine.iteration % 2 == 1:
             #discriminator learning part
             self.model.eval()
             self.latent_discrim.train()              
@@ -88,10 +86,10 @@ class VAEUpdater:
             self.optimizer_discrim.zero_grad()
             mu, logvar = self.model.encode(data, ohe)
             latents = self.model.reparameterize(mu, logvar)
-            noisy_latents = add_noise(latents, noise_beta)
+            noisy_latents = add_noise(latents, self.noise_beta)
             adv_loss_d = self.discrim_loss(self.latent_discrim(noisy_latents.detach()), ohe.argmax(1))
 
             adv_loss_d.backward()
-            clip_grad_norm_(self.latent_discrim.parameters(), clip_value)
+            clip_grad_norm_(self.latent_discrim.parameters(), self.cfg.clip_value)
             self.optimizer_discrim.step()
             self.latent_discrim_scheduler.step()
