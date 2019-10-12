@@ -127,7 +127,7 @@ with Experiment(EXPERIMENTS_DIR, cfg) as exp:
 
     metrics = {'loss': LossAggregatorMetric(), }
     for metric_name, metric in metrics.items():
-        metric.attach(evaluator, metric_name)
+        metric.attach(validator, metric_name)
     
     best_loss = inf
     
