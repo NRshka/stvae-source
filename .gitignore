@@ -1,3 +1,5 @@
 *.pyc
 *.pyc
 *test.py
+data/exp*
+test_exp*
