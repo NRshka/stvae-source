@@ -11,7 +11,7 @@ from collections import defaultdict
 from data import get_raw_data
 from experiment import Experiment
 from config import Config
-from update import VAEUpdater
+from update import VAEUpdater, Validator
 from model.autoencoders import VAE
 from model.modules import Latent_discriminator
 
