@@ -4,3 +4,5 @@ pytorch-ignite
 dataclasses
 numpy
 pandas
+typing
+
