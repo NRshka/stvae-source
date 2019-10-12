@@ -99,7 +99,7 @@ class VAEUpdater:
 
 
 class Validator:
-    def __init__(self, model, discriminator, cuda=True):
+    def __init__(self, model, discriminator, vae_beta, cuda=True):
         self.loss_function = get_variational_loss(vae_beta)
         self.model = model
         self.latent_discrim = discriminator
