@@ -148,6 +148,6 @@ with Experiment(EXPERIMENTS_DIR, cfg) as exp:
     _TENSORBOARD_DIR = cfg.experiment_dir.joinpath('log')
     tensorboard_writer = SummaryWriter(str(_TENSORBOARD_DIR))
 
-    trainer.run(dataloader_train, max_epochs=1)
+    trainer.run(dataloader_train, max_epochs=cfg.epochs)
 
     print(f'Experiment {exp.experiment_id} has finished')

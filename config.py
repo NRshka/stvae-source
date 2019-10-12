@@ -26,6 +26,7 @@ class Config:
     bottleneck: int = 200
     input_dim: int = 15987
     count_classes: int = 3
+    epochs: int = 10
     num_workers: Optional[int] = None
 
     experiment_dir: Path = Path('./data/experiment')
