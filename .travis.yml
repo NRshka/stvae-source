@@ -8,6 +8,7 @@ before_install:
     rm *private*
     gunzip *.gz
     cd ..
+python: 3.6
 script:
     python train_script.py
     
