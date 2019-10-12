@@ -33,12 +33,10 @@ def load_datasets(cfg):
     train_class_ohe = torch.Tensor(train_class_ohe)
     
     if torch.cuda.is_available():
-        print("transfer to cuda")
         val_expression_tensor = val_expression_tensor.cuda()
         val_class_ohe_tensor = val_class_ohe_tensor.cuda()
         train_expression_tensor = train_expression_tensor.cuda()
         train_class_ohe = train_class_ohe.cuda()
-        print('transfered')
     
     trainset = torch.utils.data.TensorDataset(train_expression_tensor,
                                               train_class_ohe)
@@ -48,7 +46,6 @@ def load_datasets(cfg):
                                             #num_workers=cfg.num_workers,
                                             drop_last=True)
 
-    print('before return')
     return dataloader_train, val_expression_tensor, val_class_ohe_tensor
 
 
@@ -117,7 +114,7 @@ with Experiment(EXPERIMENTS_DIR, cfg) as exp:
 
     trainer = Engine(update_class_train)
     evaluator = Engine(update_class_val)
-    print(trainer, evaluator)
+    
     trainer.iteration = 0
 
     metrics = {'loss': LossAggregatorMetric(), }

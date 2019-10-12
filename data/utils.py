@@ -35,7 +35,5 @@ def get_raw_data(directory: Path):
 
     expression = original_expr_df.to_numpy()
     class_ohe = pd.get_dummies(transfer_annot_df['Init state']).to_numpy()
-    print('Expression shape:', expression.shape)
-    print('Class ohe shape:', class_ohe.shape)
     
     return expression, class_ohe
