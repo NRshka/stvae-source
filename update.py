@@ -96,3 +96,41 @@ class VAEUpdater:
             clip_grad_norm_(self.latent_discrim.parameters(), self.cfg.clip_value)
             self.optimizer_discrim.step()
             self.latent_discrim_scheduler.step()
+
+
+class Validator:
+    def __init__(self, model, discriminator, cuda=True):
+        self.loss_function = get_variational_loss(vae_beta)
+        self.model = model
+        self.latent_discrim = discriminator
+        self.cuda = cuda
+
+
+    def __call__(self, engine, batch):
+        self.model.eval()
+        self.latent_discrim.eval()
+
+        val_expression_tensor, val_class_ohe_tensor = next(batch)
+
+        recon_val, mu_val, logvar_val = self.model(val_expression_tensor, val_class_ohe_tensor)
+        latents_val = self.model.reparameterize(mu_val, logvar_val)
+        reconstruction_loss_val = self.loss_function.reconstruction_loss(recon_val, val_expression_tensor)
+
+        discrim_preds_val = self.latent_discrim(latents_val)
+        discrim_loss_val = self.discrim_loss(discrim_preds_val.detach(), val_class_ohe_tensor.argmax(1))
+        discrim_preds_val_np = discrim_preds_val.cpu().detach().numpy()
+        discrim_val_acc = (val_class_ohe_np.argmax(1) == discrim_preds_val_np.argmax(1)).mean()
+
+        #first style transfer
+        transfer_classes_val = create_random_classes(val_expression_tensor.shape[0],
+                                                                 val_class_ohe_tensor.shape[1]).cuda()
+        a2b_expression = self.model.decode(latents_val, transfer_classes_val)
+        #second style transfer
+        b2a_mu, b2a_logvar = self.model.encode(a2b_expression, transfer_classes_val)
+        b2a_latents = self.model.reparameterize(b2a_mu, b2a_logvar)
+        b2a_expression = self.model.decode(b2a_latents, val_class_ohe_tensor)
+        cyclic_loss_val = self.loss_function.reconstruction_loss(b2a_expression, val_expression_tensor)
+
+        engine.state.loss['reconstruction'] = reconstruction_loss_val.item()
+        engine.state.loss['cyclic'] = cyclic_loss_val.item()
+        engine.state.loss['discrim'] = discrim_loss_val.item()
