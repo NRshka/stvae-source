@@ -50,8 +50,10 @@ def load_datasets(cfg):
 
 
 def create_update_classes(model, discriminator, config):
-    training_upd = VAEUpdater(model, discriminator, config, train=True)
-    validating_upd = VAEUpdater(model, discriminator, config, train=False)
+    training_upd = VAEUpdater(model, discriminator, config,
+                              train=True, cuda=torch.cuda.is_available())
+    validating_upd = VAEUpdater(model, discriminator, config,
+                                train=False, cuda=torch.cuda.is_available())
 
     return training_upd, validating_upd
 
