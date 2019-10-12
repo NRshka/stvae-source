@@ -59,7 +59,7 @@ def create_update_class(model, discriminator, config):
     training_upd = VAEUpdater(model, discriminator, config,
                               train=True, cuda=torch.cuda.is_available())
     validator_upd = Validator(model, discriminator, config.vae_beta,
-                              cfg.cuda=torch.cuda.is_available())
+                              cuda=torch.cuda.is_available())
 
     return training_upd, validator_upd
 
