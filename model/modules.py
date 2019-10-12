@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from torch.nn import Module, Sequential, Linear, BatchNorm1d
 from torch.nn import LeakyReLU, LogSoftmax
 from torch import rand, add, floor
