@@ -6,4 +6,5 @@ numpy
 pandas
 typing
 tensorboardX
+scikit-learn
 scipy
