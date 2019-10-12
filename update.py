@@ -14,7 +14,7 @@ class VAEUpdater:
     '''
 
     '''
-    def __init__(self, vae_model, disc, cfg, device=None, train=True):
+    def __init__(self, vae_model, disc, cfg, device=None, train=True, cuda=True):
         self.cfg = cfg
         self.noise_beta = self.cfg.noise_beta
 
@@ -30,6 +30,7 @@ class VAEUpdater:
         self.discrim_loss = NLLLoss()
 
         self.device = device
+        self.cuda = cuda
 
 
     def __call__(self, engine, batch):
@@ -51,7 +52,9 @@ class VAEUpdater:
             reconstruction_loss_on_batch = self.loss_function(a2a_expression, data, a2b_mu, a2b_logvar)
 
             #first style transfer
-            transfer_classes = create_random_classes(data.size()[0], ohe.shape[1]).cuda()
+            transfer_classes = create_random_classes(data.size()[0], ohe.shape[1])
+            if self.cuda:
+                transfer_classes = transfer_classes.cuda()
             a2b_expression = self.model.decode(a2b_latents, transfer_classes)
             #second style transfer
             b2a_mu, b2a_logvar = self.model.encode(a2b_expression, transfer_classes)

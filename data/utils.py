@@ -1,6 +1,6 @@
 from numpy import zeros, arange, ndarray
 from numpy.random import randint
-from torch import Tensor, randn
+from torch import Tensor, randn, cuda
 import pandas as pd
 
 from pathlib import Path
@@ -8,11 +8,10 @@ from os import listdir
 
 
 def create_random_classes(batch_size: int, num_classes: int):
-    #TODO адекватные сообщения об ошибке
-    assert isinstance(batch_size, int), TypeError("INT")
+    assert isinstance(batch_size, int), TypeError("batch size must be numeric, integer")
     assert batch_size > 0, ValueError("It can't be negative")
     
-    assert isinstance(num_classes, int), TypeError("INT")
+    assert isinstance(num_classes, int), TypeError("num_classes muust be numeric, integer")
     assert num_classes > 0, ValueError("It can't be negative")
     
     res_np = zeros((batch_size, num_classes))
@@ -23,7 +22,10 @@ def create_random_classes(batch_size: int, num_classes: int):
 
 def add_noise(expr: ndarray, beta: float = 1.0):
     #TODO doc-string
-    res = expr + randn(expr.shape).cuda() * beta
+    rand_values = randn(expr.shape)
+    if cuda.is_available():
+        rand_values = rand_values.cuda()
+    res = expr + rand_values * beta
     
     return res
 
