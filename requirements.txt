@@ -5,4 +5,4 @@ dataclasses
 numpy
 pandas
 typing
-
+tensorboardX
