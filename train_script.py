@@ -45,17 +45,22 @@ def load_datasets(cfg):
                                             shuffle=True,
                                             #num_workers=cfg.num_workers,
                                             drop_last=True)
+    valset = torch.utils.data.TensorDataset(val_expression_tensor,
+                                            val_class_ohe_tensor)
+    dataloader_val = torch.utils.data.DataLoader(valset,
+                                                 batch_size=val_expression_tensor.size()[0],
+                                                 shuffle=False,
+                                                 drop_last=True)
 
-    return dataloader_train, val_expression_tensor, val_class_ohe_tensor
+    return dataloader_train, dataloader_val
 
 
-def create_update_classes(model, discriminator, config):
+def create_update_class(model, discriminator, config):
     training_upd = VAEUpdater(model, discriminator, config,
                               train=True, cuda=torch.cuda.is_available())
-    validating_upd = VAEUpdater(model, discriminator, config,
-                                train=False, cuda=torch.cuda.is_available())
+    validator_upd = Validator(model, discriminator, cuda=torch.cuda.is_available())
 
-    return training_upd, validating_upd
+    return training_upd, validator_upd
 
 
 def create_model(cfg):
@@ -103,19 +108,19 @@ def log_progress(epoch, iteration, losses, mode='train', tensorboard_writer=None
         print(f'{epoch_str:<25}{losses_str}')
 
     for name, val in losses.items():
-        tensorboard_writer.add_scalar(f'{mode}/{name}', val, epoch if not use_iteration else iteration)
+        tensorboard_writer.add_scalar(f'{name}', val, epoch if not use_iteration else iteration)
 
 
 with Experiment(EXPERIMENTS_DIR, cfg) as exp:
     print(f'Experiment started: {exp.experiment_id}')
-    dataloader_train, val_expression, val_class_ohe = load_datasets(cfg)
+    dataloader_train, dataloader_val = load_datasets(cfg)
 
     model, disc = create_model(cfg)
 
-    update_class_train, update_class_val = create_update_classes(model, disc, cfg)
+    update_class_train, update_class_val = create_update_class(model, disc, cfg)
 
     trainer = Engine(update_class_train)
-    evaluator = Engine(update_class_val)
+    validator = Engine(update_class_val)
     
     trainer.iteration = 0
 
@@ -124,26 +129,20 @@ with Experiment(EXPERIMENTS_DIR, cfg) as exp:
         metric.attach(evaluator, metric_name)
     
     best_loss = inf
-
-    #@trainer.on(Events.ITERATION_COMPLETED)
-    #def log_training_iter(engine):
-    #    losses_train = engine.state.output
-    #    log_progress(trainer.state.epoch, trainer.state.iteration, losses_train, 'train', tensorboard_writer, True)
-
-    '''
+    
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(engine):
         global best_loss
 
-        evaluator.run(data_loader_val)
-        losses_val = evaluator.state.metrics['loss']
+        validator.run(dataloader_val)
+        losses_val = engine.state.loss
 
         log_progress(trainer.state.epoch, trainer.state.iteration, losses_val, 'val', tensorboard_writer)
 
         # if losses_val[exp.config.best_loss] < best_loss:
         #     best_loss = losses_val[exp.config.best_loss]
         #     save_weights(model, exp.experiment_dir.joinpath('best.th'))
-    '''
+    
 
     _TENSORBOARD_DIR = cfg.experiment_dir.joinpath('log')
     tensorboard_writer = SummaryWriter(str(_TENSORBOARD_DIR))
