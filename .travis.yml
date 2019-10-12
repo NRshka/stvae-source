@@ -1,12 +1,12 @@
 language: python
 before_install:
-    sudo apt-get install wget
-    mkdir ./genes
-    cd ./genes
-    wget --no-check-certificate https://ndownloader.figshare.com/articles/9925115?private_link=b8b915bad41584836bf0
-    unzip *private_link*
-    rm *private*
-    gunzip *.gz
+    sudo apt-get install wget;
+    mkdir ./genes;
+    cd ./genes;
+    wget --no-check-certificate https://ndownloader.figshare.com/articles/9925115?private_link=b8b915bad41584836bf0;
+    unzip *private_link*;
+    rm *private*;
+    gunzip *.gz;
     cd ..
 python: 3.6
 script:
