@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from collections import defaultdict
 
 from data import get_raw_data
+from utils import save_weights
 from experiment import Experiment
 from config import Config
 from update import VAEUpdater, Validator
@@ -122,9 +123,10 @@ with Experiment(EXPERIMENTS_DIR, cfg) as exp:
 
         log_progress(trainer.state.epoch, trainer.state.iteration, validator.state.losses, 'val', tensorboard_writer)
 
-        # if losses_val[exp.config.best_loss] < best_loss:
-        #     best_loss = losses_val[exp.config.best_loss]
-        #     save_weights(model, exp.experiment_dir.joinpath('best.th'))
+        if validator_state.losses['cyclic'] < best_loss:
+            best_loss = validator_state.losses['cyclic']
+            save_weights(model, exp.experiment_dir.joinpath('best_vae.pth'))
+            save_weights(disc, exp.experiment_dir.joinpath('best_disc.pth'))
     
 
     _TENSORBOARD_DIR = cfg.experiment_dir.joinpath('log')
