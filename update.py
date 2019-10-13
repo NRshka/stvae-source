@@ -14,7 +14,7 @@ class VAEUpdater:
     '''
 
     '''
-    def __init__(self, vae_model, disc, cfg, device=None, train=True, cuda=True):
+    def __init__(self, vae_model, disc, cfg, device=None, train=True, cuda=False):
         self.cfg = cfg
         self.noise_beta = self.cfg.noise_beta
 
@@ -99,18 +99,20 @@ class VAEUpdater:
 
 
 class Validator:
-    def __init__(self, model, discriminator, vae_beta, cuda=True):
+    def __init__(self, model, discriminator, vae_beta, cuda=False, device=None):
         self.loss_function = get_variational_loss(vae_beta)
         self.model = model
         self.latent_discrim = discriminator
         self.cuda = cuda
+        self.device = device
+        self.discrim_loss = NLLLoss()
 
 
     def __call__(self, engine, batch):
         self.model.eval()
         self.latent_discrim.eval()
 
-        val_expression_tensor, val_class_ohe_tensor = next(batch)
+        val_expression_tensor, val_class_ohe_tensor = _prepare_batch(batch, device=self.device)
 
         recon_val, mu_val, logvar_val = self.model(val_expression_tensor, val_class_ohe_tensor)
         latents_val = self.model.reparameterize(mu_val, logvar_val)
@@ -118,8 +120,7 @@ class Validator:
 
         discrim_preds_val = self.latent_discrim(latents_val)
         discrim_loss_val = self.discrim_loss(discrim_preds_val.detach(), val_class_ohe_tensor.argmax(1))
-        discrim_preds_val_np = discrim_preds_val.cpu().detach().numpy()
-        discrim_val_acc = (val_class_ohe_np.argmax(1) == discrim_preds_val_np.argmax(1)).mean()
+        discrim_val_acc = (val_class_ohe_tensor.argmax(1) == discrim_preds_val.argmax(1)).float().mean()
 
         #first style transfer
         transfer_classes_val = create_random_classes(val_expression_tensor.shape[0],
@@ -131,6 +132,7 @@ class Validator:
         b2a_expression = self.model.decode(b2a_latents, val_class_ohe_tensor)
         cyclic_loss_val = self.loss_function.reconstruction_loss(b2a_expression, val_expression_tensor)
 
-        engine.state.loss['reconstruction'] = reconstruction_loss_val.item()
-        engine.state.loss['cyclic'] = cyclic_loss_val.item()
-        engine.state.loss['discrim'] = discrim_loss_val.item()
+        engine.state.losses = {}
+        engine.state.losses['reconstruction'] = reconstruction_loss_val.item()
+        engine.state.losses['cyclic'] = cyclic_loss_val.item()
+        engine.state.losses['discrim'] = discrim_loss_val.item()

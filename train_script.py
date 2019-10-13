@@ -56,9 +56,17 @@ def load_datasets(cfg):
 
 
 def create_update_class(model, discriminator, config):
-    training_upd = VAEUpdater(model, discriminator, config,
+    is_cuda = torch.cuda.is_available()
+    device = None
+
+    if is_cuda:
+        device = torch.cuda.device(torch.cuda.current_device())
+        device = None
+
+    training_upd = VAEUpdater(model, discriminator, config, device=device,
                               train=True, cuda=torch.cuda.is_available())
     validator_upd = Validator(model, discriminator, config.vae_beta,
+                              device=device,
                               cuda=torch.cuda.is_available())
 
     return training_upd, validator_upd
@@ -73,27 +81,6 @@ def create_model(cfg):
         disc_model = disc_model.cuda()
 
     return vae_model, disc_model
-
-
-class LossAggregatorMetric(Metric):
-    def __init__(self, *args, **kwargs):
-        self.total_losses = defaultdict(float)
-        self.num_updates = defaultdict(int)
-        super().__init__(*args, **kwargs)
-
-    def reset(self):
-        self.total_losses = defaultdict(float)
-        self.num_updates = defaultdict(int)
-
-    def update(self, output):
-        for name, val in output.items():
-            self.total_losses[name] += float(val)
-            self.num_updates[name] += 1
-
-    def compute(self):
-        losses = {name: val / self.num_updates[name] for name, val in self.total_losses.items()}
-
-        return losses
 
 
 def log_progress(epoch, iteration, losses, mode='train', tensorboard_writer=None, use_iteration=False):
@@ -125,20 +112,15 @@ with Experiment(EXPERIMENTS_DIR, cfg) as exp:
     
     trainer.iteration = 0
 
-    metrics = {'loss': LossAggregatorMetric(), }
-    for metric_name, metric in metrics.items():
-        metric.attach(validator, metric_name)
-    
     best_loss = inf
     
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(engine):
         global best_loss
 
-        validator.run(dataloader_val)
-        losses_val = engine.state.loss
+        validator_state = validator.run(dataloader_val)
 
-        log_progress(trainer.state.epoch, trainer.state.iteration, losses_val, 'val', tensorboard_writer)
+        log_progress(trainer.state.epoch, trainer.state.iteration, validator.state.losses, 'val', tensorboard_writer)
 
         # if losses_val[exp.config.best_loss] < best_loss:
         #     best_loss = losses_val[exp.config.best_loss]
