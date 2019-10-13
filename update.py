@@ -124,7 +124,9 @@ class Validator:
 
         #first style transfer
         transfer_classes_val = create_random_classes(val_expression_tensor.shape[0],
-                                                                 val_class_ohe_tensor.shape[1]).cuda()
+                                                                 val_class_ohe_tensor.shape[1])
+        if self.cuda:
+            transfer_classes_val = transfer_classes_val.cuda()
         a2b_expression = self.model.decode(latents_val, transfer_classes_val)
         #second style transfer
         b2a_mu, b2a_logvar = self.model.encode(a2b_expression, transfer_classes_val)
