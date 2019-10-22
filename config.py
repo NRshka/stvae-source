@@ -27,10 +27,19 @@ class Config:
     input_dim: int = 15987
     count_classes: int = 3
     epochs: int = 10
+    batch_size: int = 256
     num_workers: Optional[int] = None
+
+    classifier_hidden_size: int = 512
+    classifier_epochs: int = 250
+    celltype_clf_lr: float = 1e-5
+    form_clf_lr: float = 3e-4
+    celltype_clf_wdecay: float = 0#weight decay
+    form_clf_wdecay: float = 0#weight decay
 
     experiment_dir: Path = Path('./data/experiment')
     data_dir: Path = Path('./genes')
     best_loss = inf
-
-    batch_size: int = 256
+    use_cuda: bool = True
+    random_state: int = 512
+    cuda: bool = True

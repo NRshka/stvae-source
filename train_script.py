@@ -5,11 +5,9 @@ from ignite.metrics import Metric
 from numpy import inf
 from tensorboardX import SummaryWriter
 import torch
-from sklearn.model_selection import train_test_split
 from collections import defaultdict
 
-from data import get_raw_data
-from utils import save_weights
+from utils import save_weights, load_datasets
 from experiment import Experiment
 from config import Config
 from update import VAEUpdater, Validator
@@ -18,42 +16,7 @@ from model.modules import Latent_discriminator
 
 
 THIS_DIR = Path('./').absolute()
-EXPERIMENTS_DIR = THIS_DIR.joinpath('test_experiment')
-
-cfg = Config()
-
-
-def load_datasets(cfg):
-    expr, class_ohe = get_raw_data(cfg.data_dir)
-    train_expression, val_expression, train_class_ohe, val_class_ohe = train_test_split(
-        expr, class_ohe, random_state=512, stratify = class_ohe.argmax(1), test_size=0.15
-    )
-    val_expression_tensor = torch.Tensor(val_expression)
-    val_class_ohe_tensor = torch.Tensor(val_class_ohe)
-    train_expression_tensor = torch.Tensor(train_expression)
-    train_class_ohe = torch.Tensor(train_class_ohe)
-    
-    if torch.cuda.is_available():
-        val_expression_tensor = val_expression_tensor.cuda()
-        val_class_ohe_tensor = val_class_ohe_tensor.cuda()
-        train_expression_tensor = train_expression_tensor.cuda()
-        train_class_ohe = train_class_ohe.cuda()
-    
-    trainset = torch.utils.data.TensorDataset(train_expression_tensor,
-                                              train_class_ohe)
-    dataloader_train = torch.utils.data.DataLoader(trainset,
-                                            batch_size=cfg.batch_size,
-                                            shuffle=True,
-                                            #num_workers=cfg.num_workers,
-                                            drop_last=True)
-    valset = torch.utils.data.TensorDataset(val_expression_tensor,
-                                            val_class_ohe_tensor)
-    dataloader_val = torch.utils.data.DataLoader(valset,
-                                                 batch_size=val_expression_tensor.size()[0],
-                                                 shuffle=False,
-                                                 drop_last=True)
-
-    return dataloader_train, dataloader_val
+EXPERIMENTS_DIR = THIS_DIR.joinpath('experiment')
 
 
 def create_update_class(model, discriminator, config):
@@ -100,38 +63,46 @@ def log_progress(epoch, iteration, losses, mode='train', tensorboard_writer=None
         tensorboard_writer.add_scalar(f'{name}', val, epoch if not use_iteration else iteration)
 
 
-with Experiment(EXPERIMENTS_DIR, cfg) as exp:
-    print(f'Experiment started: {exp.experiment_id}')
+def train(dataloader_train, dataloader_val, cfg):
+    with Experiment(EXPERIMENTS_DIR, cfg) as exp:
+        print(f'Experiment started: {exp.experiment_id}')
+
+        model, disc = create_model(cfg)
+
+        update_class_train, update_class_val = create_update_class(model, disc, cfg)
+
+        trainer = Engine(update_class_train)
+        validator = Engine(update_class_val)
+        
+        trainer.iteration = 0
+
+        best_loss = inf
+        
+        @trainer.on(Events.EPOCH_COMPLETED)
+        def log_training_results(engine):
+            nonlocal best_loss
+
+            validator_state = validator.run(dataloader_val)
+
+            log_progress(trainer.state.epoch, trainer.state.iteration, validator.state.losses, 'val', tensorboard_writer)
+
+            if validator_state.losses['cyclic'] < best_loss:
+                best_loss = validator_state.losses['cyclic']
+                save_weights(model, exp.experiment_dir.joinpath('best_vae.pth'))
+                save_weights(disc, exp.experiment_dir.joinpath('best_disc.pth'))
+        
+
+        _TENSORBOARD_DIR = cfg.experiment_dir.joinpath('log')
+        tensorboard_writer = SummaryWriter(str(_TENSORBOARD_DIR))
+
+        trainer.run(dataloader_train, max_epochs=cfg.epochs)
+
+        print(f'Experiment {exp.experiment_id} has finished')
+
+    return model, disc
+
+
+if __name__ == '__main__':
+    cfg = Config()
     dataloader_train, dataloader_val = load_datasets(cfg)
-
-    model, disc = create_model(cfg)
-
-    update_class_train, update_class_val = create_update_class(model, disc, cfg)
-
-    trainer = Engine(update_class_train)
-    validator = Engine(update_class_val)
-    
-    trainer.iteration = 0
-
-    best_loss = inf
-    
-    @trainer.on(Events.EPOCH_COMPLETED)
-    def log_training_results(engine):
-        global best_loss
-
-        validator_state = validator.run(dataloader_val)
-
-        log_progress(trainer.state.epoch, trainer.state.iteration, validator.state.losses, 'val', tensorboard_writer)
-
-        if validator_state.losses['cyclic'] < best_loss:
-            best_loss = validator_state.losses['cyclic']
-            save_weights(model, exp.experiment_dir.joinpath('best_vae.pth'))
-            save_weights(disc, exp.experiment_dir.joinpath('best_disc.pth'))
-    
-
-    _TENSORBOARD_DIR = cfg.experiment_dir.joinpath('log')
-    tensorboard_writer = SummaryWriter(str(_TENSORBOARD_DIR))
-
-    trainer.run(dataloader_train, max_epochs=cfg.epochs)
-
-    print(f'Experiment {exp.experiment_id} has finished')
+    train(dataloader_train, dataloader_val, cfg)

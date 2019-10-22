@@ -37,5 +37,6 @@ def get_raw_data(directory: Path):
 
     expression = original_expr_df.to_numpy()
     class_ohe = pd.get_dummies(transfer_annot_df['Init state']).to_numpy()
+    cell_type = pd.get_dummies(transfer_annot_df['Cell type']).to_numpy()
     
-    return expression, class_ohe
+    return expression, class_ohe, cell_type
