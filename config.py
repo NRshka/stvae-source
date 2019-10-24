@@ -26,7 +26,7 @@ class Config:
     bottleneck: int = 200
     input_dim: int = 15987
     count_classes: int = 3
-    epochs: int = 10
+    epochs: int = 500
     batch_size: int = 256
     num_workers: Optional[int] = None
 
