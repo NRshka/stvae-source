@@ -1,3 +1,5 @@
+import torch
+import numpy as np
 import tempfile
 from pathlib import Path
 
@@ -29,6 +31,12 @@ class Experiment:
 
         # save the config file
         Experiment._save_config(self.config, self.experiment_dir)
+
+        #make it reproducibility
+        np.random.seed(0)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.manual_seed(0)
 
         return self
 
