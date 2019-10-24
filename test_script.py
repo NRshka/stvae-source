@@ -23,7 +23,51 @@ cfg = Config()
 THIS_DIR = Path('./').absolute()
 EXPERIMENTS_DIR = THIS_DIR.joinpath('experiment')
 
+def train_classifiers(annot_dataloader, count_celltypes, count_classes):
+    celltype_clf = Classifier(inp_size=cfg.input_dim, out_size=count_celltypes)
+    form_clf = Classifier(inp_size=cfg.input_dim, out_size=count_classes)
+    if cfg.use_cuda and cuda_is_available():
+        celltype_clf = celltype_clf.cuda()
+        form_clf = form_clf.cuda()
+    
+    celltype_clf_opt = torch.optim.Adam(celltype_clf.parameters(), 
+                                        weight_decay=cfg.celltype_clf_wdecay,
+                                        lr=cfg.celltype_clf_lr)
+    form_clf_opt = torch.optim.Adam(form_clf.parameters(),
+                                        weight_decay=cfg.form_clf_wdecay,
+                                        lr=cfg.form_clf_lr)
 
+    celltype_criterion = nn.CrossEntropyLoss()
+    form_criterion = nn.CrossEntropyLoss()
+
+    print('\n')
+    for epoch in range(cfg.classifier_epochs):
+        print(f'\rTraining classifier [{epoch+1}/{cfg.classifier_epochs}]', end='')
+        celltype_clf.train()
+        form_clf.train()
+        for exp_, form_, cell_type_ in annot_dataloader:
+            exp_ = exp_.cuda()
+            form_ = form_.argmax(-1).cuda()
+            cell_type_ = cell_type_.argmax(-1).cuda()
+            
+            predicted_celltype_ = celltype_clf(exp_)
+            celltype_loss_on_batch = celltype_criterion(predicted_celltype_, cell_type_)
+            
+            celltype_clf_opt.zero_grad()
+            celltype_loss_on_batch.backward()
+            celltype_clf_opt.step()
+            
+            predicted_form_ = form_clf(exp_)
+            form_loss_on_batch = form_criterion(predicted_form_, form_)
+            
+            form_clf_opt.zero_grad()
+            form_loss_on_batch.backward()
+            form_clf_opt.step()
+
+        celltype_clf.eval()
+        form_clf.eval()
+
+        return celltype_clf, form_clf
 
 def test(vae_model, discrim, annot_dataloader,
             test_expression = None, 
@@ -70,51 +114,9 @@ def test(vae_model, discrim, annot_dataloader,
     print('Calibration accuracy', (res_norm.argmin(1) == class_ohe_test.argmax(1)).mean())
 
     #train
-    celltype_clf = Classifier(inp_size=cfg.input_dim, out_size=celltype_test.shape[1])
-    form_clf = Classifier(inp_size=cfg.input_dim, out_size=cfg.count_classes)
-    if cfg.use_cuda and cuda_is_available():
-        celltype_clf = celltype_clf.cuda()
-        form_clf = form_clf.cuda()
-    
-    celltype_clf_opt = torch.optim.Adam(celltype_clf.parameters(), 
-                                        weight_decay=cfg.celltype_clf_wdecay,
-                                        lr=cfg.celltype_clf_lr)
-    form_clf_opt = torch.optim.Adam(form_clf.parameters(),
-                                        weight_decay=cfg.form_clf_wdecay,
-                                        lr=cfg.form_clf_lr)
-
-    celltype_criterion = nn.CrossEntropyLoss()
-    form_criterion = nn.CrossEntropyLoss()
-
-    celltype_losses = []
-    print('\n')
-    for epoch in range(cfg.classifier_epochs):
-        print(f'\rTraining classifier [{epoch+1}/{cfg.classifier_epochs}]', end='')
-        celltype_clf.train()
-        form_clf.train()
-        for exp_, form_, cell_type_ in annot_dataloader:
-            exp_ = exp_.cuda()
-            form_ = form_.argmax(-1).cuda()
-            cell_type_ = cell_type_.argmax(-1).cuda()
-            
-            predicted_celltype_ = celltype_clf(exp_)
-            celltype_loss_on_batch = celltype_criterion(predicted_celltype_, cell_type_)
-            #tcl_losses.append(loss.item())
-            
-            celltype_clf_opt.zero_grad()
-            celltype_loss_on_batch.backward()
-            celltype_clf_opt.step()
-            
-            predicted_form_ = form_clf(exp_)
-            form_loss_on_batch = form_criterion(predicted_form_, form_)
-            #tcl_losses.append(loss.item())
-            
-            form_clf_opt.zero_grad()
-            form_loss_on_batch.backward()
-            form_clf_opt.step()
-        
-        celltype_clf.eval()
-        form_clf.eval()
+    celltype_clf, form_clf = train_classifiers(annot_dataloader, 
+                                                celltype_test.shape[1], 
+                                                cfg.count_classes)
     
     print('\n')
 
@@ -149,6 +151,15 @@ def test(vae_model, discrim, annot_dataloader,
     print('Cell type prediction accuracy [reconstructed data]', celltype_notransfer_accuracy)
     print('Cell type prediction accuracy [transfered to another classes]', celltype_transfer_accuracy)
     print('Class prediction accuracy:', form_test_accuracy)
+
+    return {
+        'Cell type prediction accuracy [train]:': celltype_train_accuracy,
+        'Cell type prediction accuracy [test hold out data]': celltype_test_raw_accuracy,
+        'Cell type prediction accuracy [vae transfered data]': celltype_test_accuracy,
+        'Cell type prediction accuracy [reconstructed data]': celltype_notransfer_accuracy,
+        'Cell type prediction accuracy [transfered to another classes]': celltype_transfer_accuracy,
+        'Class prediction accuracy:': form_test_accuracy
+    }
 
 
 if __name__ == '__main__':
