@@ -9,10 +9,11 @@ from utils import save_pickle, load_pickle
 class Experiment:
     _CONFIG_FILENAME = 'config.pkl'
 
-    def __init__(self, experiments_dir, config, prefix=None):
+    def __init__(self, experiments_dir, config, prefix=None, random_seed=0):
         self.config = config
         self.experiments_dir = experiments_dir
         self.prefix = prefix
+        self.random_seed = random_seed if isinstance(random_seed, int) else 0
 
         # create dir for the experiment
         if self.prefix is not None:
@@ -25,7 +26,7 @@ class Experiment:
         #check if dir exists
         if not self.experiments_dir.is_dir():
             self.experiments_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.experiment_dir = Path(tempfile.mkdtemp(dir=self.experiments_dir, prefix=self.prefix))
         self.experiment_id = self.experiment_dir.name
 
@@ -33,10 +34,10 @@ class Experiment:
         Experiment._save_config(self.config, self.experiment_dir)
 
         #make it reproducibility
-        np.random.seed(0)
+        np.random.seed(self.random_seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-        torch.manual_seed(0)
+        torch.manual_seed(self.random_seed)
 
         return self
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 from torch.nn import Module, Sequential, Linear, BatchNorm1d
 from torch.nn import LeakyReLU, LogSoftmax
-from torch import rand, add, floor
+from torch.nn.functional import softplus
+from torch import rand, add, floor, tanh
 from torch import LongTensor
-  
+
 import math
 import torch
 from torch.optim.optimizer import Optimizer, required
@@ -12,7 +13,7 @@ class BatchSwapNoise(Module):
     '''
     Swap Noise module
     
-    @param p: float, probability
+    :param p: float, probability
     '''
 
     def __init__(self, p):
@@ -38,9 +39,9 @@ class Latent_discriminator(Module):
         assert isinstance(bottleneck, int), TypeError("INT!")
         assert count_classes > 0, ValueError(f"A dimension can't be negative: {count_classes}")
         assert isinstance(count_classes, int), TypeError("INT!")
-        
+
         super(Latent_discriminator,self).__init__()
-        
+
         self.model = Sequential(
             Linear(bottleneck, 1024, bias=False),
             BatchNorm1d(1024),
@@ -49,9 +50,10 @@ class Latent_discriminator(Module):
             BatchNorm1d(1024),
             LeakyReLU(0.2, inplace=True),
             Linear(1024, count_classes, bias=False),
-            LogSoftmax(dim=-1))
-    
-    
+            LogSoftmax(dim=-1)
+        )
+
+
      def forward(self,x):
         return self.model(x)
 
@@ -260,3 +262,14 @@ class AdamW(Optimizer):
                 p.data.copy_(p_data_fp32)
 
         return loss
+
+
+class MishLayer(Module):
+    '''
+    Mish activation functio
+    '''
+    def __init__(self):
+        super(MishLayer, self).__init__()
+
+    def forward(self, x):
+        return x*tanh(softplus(x))

@@ -22,13 +22,20 @@ class Config:
     vae_beta: float = 1e-4
     adv_weight: float = 0.07
     cyclic_weight: float = 0.2
-    
-    bottleneck: int = 200
+    mmd_weight = 1e1#1e1
+    l1_weight = 0#.5
+    kernel_mu = 0.4
+    model_scheduler_gamma = 0.992
+    discr_scheduler_gamma = 0.992
+
+    bottleneck: int = 1800
     input_dim: int = 15987
+    count_labels: int = 12
     count_classes: int = 3
-    epochs: int = 500
+    epochs: int = 400
     batch_size: int = 256
     num_workers: Optional[int] = None
+    activation: str = 'mish'
 
     classifier_hidden_size: int = 512
     classifier_epochs: int = 250
@@ -40,6 +47,10 @@ class Config:
     experiment_dir: Path = Path('./data/experiment')
     data_dir: Path = Path('./genes')
     best_loss = inf
+    early_stop_epochs: int = 30#Number of epochs to wait if no loss improvement and then stop the training.
     use_cuda: bool = True
     random_state: int = 512
     cuda: bool = True
+
+    def __str__(self):
+        return '\n'.join([f"{key}: {value}" for key, value in self.__dict__.items()])

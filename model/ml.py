@@ -24,7 +24,7 @@ def get_knn_purity(latents, labels, n_neighs=30):
     neigh_labels = vectorize(lambda x: labels[x])(indices)
 
     scores = ((neigh_labels - labels.reshape(-1, 1)) == 0).mean(axis=1)
-    res = [np_mean(scores[label.shape(scores.shape) == i]) for i in unique(labels)]
+    res = [np_mean(scores[labels.reshape(scores.shape) == i]) for i in unique(labels)]
 
     return np_mean(res)
 

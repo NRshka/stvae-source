@@ -1,5 +1,6 @@
 import pickle
 import torch
+from numpy import max
 from sklearn.model_selection import train_test_split
 
 from data import get_raw_data
@@ -80,8 +81,16 @@ def to_device(obj, device=None):
     obj = obj.to(device)
     return obj
 
-def load_datasets(cfg, test: bool = False, annot: bool = False):
-    expr, class_ohe, cell_type = get_raw_data(cfg.data_dir)
+def load_datasets(cfg, test: bool = False, annot: bool = False,
+                  custom_data=None, preprocessing=None):
+    expr, class_ohe, cell_type = None, None, None
+    if custom_data is None:
+        expr, class_ohe, cell_type = get_raw_data(cfg.data_dir, preprocessing)
+    else:
+        expr, class_ohe, cell_type = custom_data
+
+    assert not (expr is None or class_ohe is None or cell_type is None), "Any data have not to be None"
+
     train_expression, val_expression, train_class_ohe, val_class_ohe, train_annot, test_annot = train_test_split(
         expr, class_ohe, cell_type,
         random_state=cfg.random_state,
@@ -90,11 +99,11 @@ def load_datasets(cfg, test: bool = False, annot: bool = False):
 
     full_test_expr = torch.Tensor(val_expression)
     full_test_form = torch.Tensor(val_class_ohe)
-    
+
     val_expression, test_expression, val_class_ohe, test_class_ohe = train_test_split(
         val_expression, val_class_ohe, random_state=cfg.random_state, test_size=0.15
     )
-    
+
     val_expression_tensor = torch.Tensor(val_expression)
     val_class_ohe_tensor = torch.Tensor(val_class_ohe)
     train_expression_tensor = torch.Tensor(train_expression)
@@ -103,7 +112,8 @@ def load_datasets(cfg, test: bool = False, annot: bool = False):
     test_class_ohe_tensor = torch.Tensor(test_class_ohe)
     train_annot_tensor = torch.Tensor(train_annot)
     test_annot_tensor = torch.Tensor(test_annot)
-    
+
+
     if cfg.cuda and torch.cuda.is_available():
         val_expression_tensor = val_expression_tensor.cuda()
         val_class_ohe_tensor = val_class_ohe_tensor.cuda()
@@ -115,7 +125,7 @@ def load_datasets(cfg, test: bool = False, annot: bool = False):
         train_annot_tensor = train_annot_tensor.cuda()
         test_annot_tensor = test_annot_tensor.cuda()
         full_test_form = full_test_form.cuda()
-    
+
     trainset = torch.utils.data.TensorDataset(train_expression_tensor,
                                             train_class_ohe_tensor)
     dataloader_train = torch.utils.data.DataLoader(trainset,
@@ -129,7 +139,7 @@ def load_datasets(cfg, test: bool = False, annot: bool = False):
                                                 batch_size=val_expression_tensor.size(0),
                                                 shuffle=False,
                                                 drop_last=True)
-    
+
     result = tuple((dataloader_train, dataloader_val))
 
     if test:

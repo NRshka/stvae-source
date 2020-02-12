@@ -1,8 +1,62 @@
-from torch import mean
+from torch import(
+                  mean, randn, cuda, 
+                  transpose, matmul, exp
+                )
+from torch import sum as tsum
 from torch.nn import MSELoss
+from functools import partial
+from .mmd import mix_rbf_mmd2
 
 
-def get_variational_loss(vae_beta):
+def pairwise_distance(x, y):
+    if not len(x.shape) == len(y.shape) == 2:
+        raise ValueError('Both inputs should be matrices.')
+
+    if x.shape[1] != y.shape[1]:
+        raise ValueError('The number of features should be the same.')
+
+    x = x.view(x.shape[0], x.shape[1], 1)
+    y = transpose(y, 0, 1)
+    output = tsum((x - y) ** 2, 1)
+    output = transpose(output, 0, 1)
+
+    return output
+
+
+def gaussian_kernel_matrix(x, y, gamma):
+    '''
+        Do the gaussian kernel-based estimation of distance
+        between distributions over x and y variables
+        :param sigmas: sigmas is the hyperparameter sets prior to the kernel computation
+    '''
+    #sigmas = sigmas.view(sigmas.shape[0], 1)
+    #gamma = 1. / (2. * sigmas)
+    dist = pairwise_distance(x, y).contiguous()
+    dist_ = dist.view(1, -1)
+    s = matmul(gamma, dist_)
+
+    return tsum(exp(-s), 0).view_as(dist)
+
+
+def maximum_mean_discrepancy(x, y, kernel):
+    value = kernel(x, x) - 2 * kernel(x, y) + kernel(y, y)
+    return value
+
+
+def mmd_criterion(x, y, use_cuda=True, mu=1, sigma=1e-6):
+    '''sigmas = randn(x.shape[0], 1)*sigma + mu
+    if use_cuda and cuda.is_available:
+        sigmas = sigmas.cuda()
+
+    kernel = partial(gaussian_kernel_matrix, gamma=sigmas)
+    loss = maximum_mean_discrepancy(x, y, kernel)
+    '''
+    loss = mix_rbf_mmd2(x, y, [1e3, 2e3, 4e3, 8e3, 16e3])
+
+    return loss
+
+
+def get_variational_loss(vae_beta: float, rec_coef: float = 1.):
     def loss_function(recon_x, x, mu, logvar):
         '''
         Reconstruction + KL divergence losses summed over all elements and batch.
@@ -15,9 +69,11 @@ def get_variational_loss(vae_beta):
         # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
         KLD = -0.5 * mean(1 + logvar - mu.pow(2) - logvar.exp())
 
-        return rec_loss_ + loss_function.vae_beta*KLD
-    
+        return loss_function.rec_coef*rec_loss_ + loss_function.vae_beta*KLD
+
     loss_function.reconstruction_loss = MSELoss(reduction='mean')
     loss_function.vae_beta = vae_beta
-    
+    loss_function.rec_coef = rec_coef
+
     return loss_function
+
