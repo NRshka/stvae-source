@@ -8,3 +8,5 @@ typing
 tensorboardX
 scikit-learn
 scipy
+scanpy
+#trvae
