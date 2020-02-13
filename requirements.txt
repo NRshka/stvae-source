@@ -9,4 +9,5 @@ tensorboardX
 scikit-learn
 scipy
 scanpy
+ranger
 #trvae
