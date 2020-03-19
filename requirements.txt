@@ -8,6 +8,7 @@ typing
 tensorboardX
 scikit-learn
 scipy
+scvi
 scanpy
 ranger
-#trvae
+scgen
