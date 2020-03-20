@@ -4,7 +4,7 @@ from ignite.engine import _prepare_batch
 from torch import mean, exp, unique, cat, isnan
 from torch import norm as torch_norm
 #from torch import save as torch_save
-from torch.nn import NLLLoss, Linear
+from torch.nn import NLLLoss, Linear, CrossEntropyLoss, MSELoss
 from torch.nn.utils import clip_grad_norm_
 from torch.optim.lr_scheduler import ExponentialLR, CosineAnnealingLR
 from torch.optim import Adam
@@ -13,6 +13,7 @@ from model import RAdam
 from ranger import Ranger
 from model.losses import get_variational_loss, mmd_criterion
 from data.utils import create_random_classes, add_noise
+
 
 
 
@@ -36,9 +37,10 @@ class VAEUpdater:
         self.loss_function = get_variational_loss(self.cfg.vae_beta, 1.)
         self.discrim_loss = NLLLoss()
 
+        self.form_consistency_loss = CrossEntropyLoss()
+
         self.device = device
         self.cuda = cuda
-
 
     def __call__(self, engine, batch):
         self.noise_beta = self.noise_beta * self.cfg.decay_beta
@@ -53,7 +55,7 @@ class VAEUpdater:
             self.optimizer.zero_grad()
 
             #encoding expression batch with initial classes and evaluating the reconstruction loss
-            a2b_mu, a2b_logvar = self.model.encode(data, ohe)
+            a2b_mu, a2b_logvar, a2b_form = self.model.encode(data, ohe)
             a2b_latents = self.model.reparameterize(a2b_mu, a2b_logvar)
             a2a_expression, mmd_values = self.model.decode(a2b_latents, ohe)
             reconstruction_loss_on_batch = self.loss_function(a2a_expression, data, a2b_mu, a2b_logvar)
@@ -78,13 +80,22 @@ class VAEUpdater:
                 transfer_classes = transfer_classes.cuda()
             a2b_expression = self.model.decode(a2b_latents, transfer_classes)[0]
             #second style transfer
-            b2a_mu, b2a_logvar = self.model.encode(a2b_expression, transfer_classes)
+            b2a_mu, b2a_logvar, b2a_form = self.model.encode(a2b_expression, ohe)
             b2a_latents = self.model.reparameterize(b2a_mu, b2a_logvar)
             b2a_expression = self.model.decode(b2a_latents, ohe)[0]
             cyclic_loss_on_batch = self.loss_function.reconstruction_loss(b2a_expression, data)
+            
+            #form consistency loss
+            #form_consistency_loss_on_batch = self.form_consistency_loss(b2a_form, ohe.argmax(1))
+            #form_consistency_loss_on_batch = self.form_consistency_loss(b2a_form, transfer_classes.argmax(1))
+            #form_consistency_loss_on_batch = self.form_consistency_loss(a2b_form, ohe.argmax(1))
+            a2a_mu, a2a_logvar, a2a_form = self.model.encode(a2a_expression, ohe)
+            a2a_latents = self.model.reparameterize(a2a_mu, a2a_logvar)
+            
+            form_consistency_loss_on_batch = self.form_consistency_loss(a2b_form, ohe.argmax(1)) + self.form_consistency_loss(b2a_form, transfer_classes.argmax(1)) + MSELoss()(a2a_latents, b2a_latents)
 
             #adversarial part
-            mu, logvar = self.model.encode(data, ohe)
+            mu, logvar, form_ = self.model.encode(data, ohe)
             latents = self.model.reparameterize(mu, logvar)
             latents = self.model.reparameterize(mu, logvar)
             #next_layers_out = self.model.decode(latents, ohe)[1]
@@ -103,7 +114,7 @@ class VAEUpdater:
 
             loss = reconstruction_loss_on_batch + self.cfg.cyclic_weight*cyclic_loss_on_batch + \
                     self.cfg.adv_weight*adv_loss_g - self.cfg.mmd_weight*av_mmd_loss + \
-                    self.cfg.l1_weight*l1_regularization
+                    self.cfg.l1_weight*l1_regularization +self.cfg.form_consistency_weight*form_consistency_loss_on_batch
             #print('Cyclic:', cyclic_loss_on_batch.item())
             #print('Sum:', loss.item())
             loss.backward()
@@ -118,7 +129,7 @@ class VAEUpdater:
             self.latent_discrim.train()
 
             self.optimizer_discrim.zero_grad()
-            mu, logvar = self.model.encode(data, ohe)
+            mu, logvar, form_ = self.model.encode(data, ohe)
             latents = self.model.reparameterize(mu, logvar)
             noisy_latents = add_noise(latents, self.noise_beta)
             adv_loss_d = self.discrim_loss(self.latent_discrim(noisy_latents.detach()), ohe.argmax(1))
@@ -184,7 +195,7 @@ class Validator:
                 transfer_classes_val = transfer_classes_val.cuda()
             a2b_expression = self.model.decode(latents_val, transfer_classes_val)[0]
             #second style transfer
-            b2a_mu, b2a_logvar = self.model.encode(a2b_expression, transfer_classes_val)
+            b2a_mu, b2a_logvar, form_ = self.model.encode(a2b_expression, transfer_classes_val)
             b2a_latents = self.model.reparameterize(b2a_mu, b2a_logvar)
             b2a_expression = self.model.decode(b2a_latents, val_class_ohe_tensor)[0]
             cyclic_loss_val = self.loss_function.reconstruction_loss(b2a_expression, val_expression_tensor)

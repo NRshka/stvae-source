@@ -15,30 +15,34 @@ class Config:
     noise_beta: float = 0.1
     decay_beta: float = 1.
     clip_value: float = 1.
-    vae_lr: float = 1e-4
+    vae_lr: float = 0.001
     vae_decay: float = 1e-3
     disc_lr: float = 1e-4
     disc_decay: float = 0.
-    vae_beta: float = 1e-4
-    adv_weight: float = 0.07
+    vae_beta: float = 2e-5
+    adv_weight: float = 0.0000001
     cyclic_weight: float = 0.2
-    mmd_weight = 1e1#1e1
-    l1_weight = 0#.5
-    kernel_mu = 0.4
-    model_scheduler_gamma = 0.992
-    discr_scheduler_gamma = 0.992
+    mmd_weight: float = 0
+    l1_weight: float = 0#.5
+    kernel_mu: float = 0.4
+    model_scheduler_gamma: float = 0.992
+    discr_scheduler_gamma: float = 0.992
+    n_layers: int = 2
+    scale_alpha: float = 1.3
+    form_consistency_weight: float = 0.2
 
-    bottleneck: int = 1800
+    bottleneck: int = 30
     input_dim: int = 15987
     count_labels: int = 12
     count_classes: int = 3
-    epochs: int = 400
-    batch_size: int = 256
+    epochs: int = 600
+    batch_size: int = 128
     num_workers: Optional[int] = None
     activation: str = 'mish'
+    n_genes: int = 700
 
     classifier_hidden_size: int = 512
-    classifier_epochs: int = 250
+    classifier_epochs: int = 450
     celltype_clf_lr: float = 1e-5
     form_clf_lr: float = 3e-4
     celltype_clf_wdecay: float = 0#weight decay
@@ -51,6 +55,8 @@ class Config:
     use_cuda: bool = True
     random_state: int = 512
     cuda: bool = True
+    reproducibility: bool = True
+    verbose: str = 'all'
 
     def __str__(self):
         return '\n'.join([f"{key}: {value}" for key, value in self.__dict__.items()])

@@ -6,6 +6,7 @@ from numpy import stack, zeros, unique, arange, log, vectorize, logical_or
 from numpy import mean as np_mean
 from math import log2
 from warnings import warn
+from torch import Tensor
 import pdb
 
 def count2d(arr, max_ind):
@@ -19,6 +20,9 @@ def count2d(arr, max_ind):
 
 
 def get_knn_purity(latents, labels, n_neighs=30):
+    latents = latents.cpu().detach().numpy() if isinstance(latents, Tensor) else latents
+    labels = labels.cpu().detach().numpy() if isinstance(labels, Tensor) else labels
+
     nbrs = NearestNeighbors(n_neighbors=n_neighs + 1).fit(latents)
     indices = nbrs.kneighbors(latents, return_distance=False)[:, 1:]
     neigh_labels = vectorize(lambda x: labels[x])(indices)

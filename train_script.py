@@ -44,7 +44,7 @@ def create_update_class(model, discriminator, config):
 
 
 def create_model(cfg):
-    vae_model = VAE(cfg.bottleneck, cfg.input_dim, cfg.count_classes)
+    vae_model = VAE(cfg.bottleneck, cfg.input_dim, cfg.count_classes, cfg.n_layers, cfg.scale_alpha)
     init_weights(vae_model)
     disc_model = Latent_discriminator(cfg.bottleneck, cfg.count_classes)
     init_weights(disc_model)
@@ -103,45 +103,45 @@ def train(dataloader_train, dataloader_val, cfg,
         last_cyclic_loss = inf
         count_increas_losses = 0
 
-        @trainer.on(Events.EPOCH_COMPLETED)
-        def log_training_results(engine):
-            nonlocal best_loss
-            nonlocal last_cyclic_loss
-            nonlocal count_increas_losses
+        if cfg.verbose != 'silent':
+            @trainer.on(Events.EPOCH_COMPLETED)
+            def log_training_results(engine):
+                nonlocal best_loss
+                nonlocal last_cyclic_loss
+                nonlocal count_increas_losses
 
-            #trainer._process_function.model_scheduler.step()
-            #trainer._process_function.latent_discrim_scheduler.step()
+                #trainer._process_function.model_scheduler.step()
+                #trainer._process_function.latent_discrim_scheduler.step()
 
-            validator_state = validator.run(dataloader_val)
+                validator_state = validator.run(dataloader_val)
 
-            log_progress(trainer.state.epoch, trainer.state.iteration, validator.state.losses, 'val', tensorboard_writer)
+                log_progress(trainer.state.epoch, trainer.state.iteration, validator.state.losses, 'val', tensorboard_writer)
 
-            try:
-                #early stopping
-                if last_cyclic_loss - validator_state.losses['cyclic'] < 0.0018:
-                    count_increas_losses += 1
-                else:
-                    count_increas_losses = 0
-                last_cyclic_loss = validator_state.losses['cyclic']
+                try:
+                    #early stopping
+                    if last_cyclic_loss - validator_state.losses['cyclic'] < 0.0018:
+                        count_increas_losses += 1
+                    else:
+                        count_increas_losses = 0
+                    last_cyclic_loss = validator_state.losses['cyclic']
 
-                if count_increas_losses >= cfg.early_stop_epochs:
-                    print("=========Early stopping: loss doesn't decreases",
-                        f"{cfg.early_stop_epochs} epochs=========")
-                    #engine.terminate()
+                    if count_increas_losses >= cfg.early_stop_epochs:
+                        print("=========Early stopping: loss doesn't decreases",
+                            f"{cfg.early_stop_epochs} epochs=========")
+                        #engine.terminate()
 
 
-                if validator_state.losses['cyclic'] < best_loss:
-                    best_loss = validator_state.losses['cyclic']
-                    try:
-                        pass
-                        #save_weights(model, exp.experiment_dir.joinpath('best_vae.pth'))
-                        #save_weights(disc, exp.experiment_dir.joinpath('best_disc.pth'))
-                    except Exception as e:
-                        print(e)
-            except:
-                # if no cyclic loss or smth
-                pass
-
+                    if validator_state.losses['cyclic'] < best_loss:
+                        best_loss = validator_state.losses['cyclic']
+                        try:
+                            pass
+                            #save_weights(model, exp.experiment_dir.joinpath('best_vae.pth'))
+                            #save_weights(disc, exp.experiment_dir.joinpath('best_disc.pth'))
+                        except Exception as e:
+                            print(e)
+                except:
+                    # if no cyclic loss or smth
+                    pass
 
         _TENSORBOARD_DIR = exp.experiment_dir.joinpath('log')
         tensorboard_writer = SummaryWriter(str(_TENSORBOARD_DIR))
