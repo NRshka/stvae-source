@@ -1,3 +1,5 @@
+import os
+from collections import Iterable
 import torch
 import numpy as np
 import tempfile
@@ -11,7 +13,7 @@ class Experiment:
 
     def __init__(self, experiments_dir, config, prefix=None, random_seed=0):
         self.config = config
-        self.experiments_dir = experiments_dir
+        self.experiments_dir = Path(experiments_dir)
         self.prefix = prefix
         self.random_seed = random_seed if isinstance(random_seed, int) else 0
 
@@ -23,7 +25,7 @@ class Experiment:
         self.experiment_id = None
 
     def __enter__(self):
-        #check if dir exists
+        # check if dir exists
         if not self.experiments_dir.is_dir():
             self.experiments_dir.mkdir(parents=True, exist_ok=True)
 
@@ -34,10 +36,23 @@ class Experiment:
         Experiment._save_config(self.config, self.experiment_dir)
 
         #make it reproducibility
-        np.random.seed(self.random_seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-        torch.manual_seed(self.random_seed)
+        if self.config.reproducibility:
+            np.random.seed(self.random_seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+            torch.manual_seed(self.random_seed)
+
+        # use cuda
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+        try:
+            if isinstance(self.config.device_ids, Iterable):
+                device_ids = list(map(str, self.config.device_ids))
+            else:
+                device_ids = [str(self.config.device_ids)]
+        except TypeError as err:
+            raise TypeError("device_ids must contains values that can be \
+                            casted into a string")
+        os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(device_ids)
 
         return self
 
@@ -59,7 +74,6 @@ class Experiment:
     @classmethod
     def _save_config(cls, config, experiment_dir):
         filename = experiment_dir.joinpath(Experiment._CONFIG_FILENAME)
-                
         save_pickle(config, filename)
 
     @classmethod
