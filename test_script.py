@@ -301,7 +301,6 @@ def test(cfg, vae_model, discrim, annot_dataloader,
     print('Confusion matrix | CELLTYPE RECONSTRUCTION')
     print(recon_confusion)
 
-    np.save(f'/storage1/report1/{dataset_name}_recon_celltype.npy', recon_confusion)
     from sklearn.metrics import classification_report
     rep = classification_report(
         celltype_test_labelenc[sameclass_mask],
@@ -309,16 +308,14 @@ def test(cfg, vae_model, discrim, annot_dataloader,
         output_dict=True
     )
     df = pd.DataFrame(rep).transpose()
-    df.to_csv(f'/storage1/report1/{dataset_name}_recon_celltype.csv')
+    print(df)
     print('Celltype reconstruction report')
-    print(rep)
 
     if (~sameclass_mask).any():
         celltype_transfer_accuracy = (predicted_celltype_test_labelenc[~sameclass_mask] == celltype_test_labelenc[~sameclass_mask]).mean(0)
         transfer_confusion = confusion_matrix(celltype_test_labelenc[~sameclass_mask],
                                               predicted_celltype_test_labelenc[~sameclass_mask])
         print('Confusion matrix | CELLTYPE TRANSFER')
-        np.save(f'/storage1/report1/{dataset_name}_transfer_celltype.npy', transfer_confusion)
         print(transfer_confusion)
 
         print('Celltype transfer report')
@@ -327,9 +324,8 @@ def test(cfg, vae_model, discrim, annot_dataloader,
             predicted_celltype_test_labelenc[~sameclass_mask],
             output_dict=True
         )
-        print(rep)
         df = pd.DataFrame(rep).transpose()
-        df.to_csv(f'/storage1/report/{dataset_name}_transfer_celltype.csv')
+        print(df)
 
         print('Form transfer report')
         pred_f_t = predicted_form_test if isinstance(predicted_form_test, np.ndarray) else predicted_form_test.argmax(1).cpu().detach().numpy()
@@ -338,9 +334,8 @@ def test(cfg, vae_model, discrim, annot_dataloader,
             pred_f_t[~sameclass_mask],
             output_dict=True
         )
-        print(rep)
         df = pd.DataFrame(rep).transpose()
-        df.to_csv(f'/storage1/report1/{dataset_name}_transfer_form.csv')
+        print(df)
     else:
         celltype_transfer_accuracy = "Not enoug classes for transfering"
     predicted_form_test = predicted_form_test.argmax(1).cpu().detach().numpy()
@@ -350,15 +345,12 @@ def test(cfg, vae_model, discrim, annot_dataloader,
                                        normalize='all')
     print('Confusion matrix | FORM RECONSTRUCTED')
     print(recon_confusion)
-    np.save(f'/storage1/reportq/{dataset_name}_recon_form.npy', recon_confusion)
 
     transfer_confusion = confusion_matrix(form_test_labelenc[~sameclass_mask],
                                           pred_f_t[~sameclass_mask],
                                           normalize='all')
     print('Confusion matrix | FORM TRANSFER')
     print(transfer_confusion)
-    np.save(f'/storage1/reportq/{dataset_name}_transfer_form.npy',
-            transfer_confusion)
 
     rep = classification_report(
         form_test_labelenc[~sameclass_mask],
@@ -366,9 +358,8 @@ def test(cfg, vae_model, discrim, annot_dataloader,
         output_dict=True
     )
     df = pd.DataFrame(rep).transpose()
-    df.to_csv(f'/storage1/report/{dataset_name}_transfer_form.csv')
+    print(df)
     print('Form reconstructed report')
-    print(rep)
 
 
     # classifier on latents
