@@ -1,4 +1,5 @@
 import argparse
+import importlib
 from functools import partial
 from pathlib import Path
 import numpy as np
@@ -34,14 +35,14 @@ benchmark_functions = (
 epochs = (600, 100, 100, 300)
 datasets = {
     'retina': RetinaDataset,
-    'starmap': PreFrontalCortexStarmapDataset,
-    'mouse': MouseDataset(
-        './mouse_genes/ST1 - original_expression.csv',
-        './mouse_genes/batches.csv',
-        './mouse_genes/labels.csv'
-    ),
-    'pbmc': BermudaDataset('./pbmc/pbmc8k_seurat.csv'),
-    'pancreas': PbmcDataset('./pancreas/muraro_seurat.csv')
+    'starmap': PreFrontalCortexStarmapDataset
+    #'mouse': MouseDataset(
+    #    './mouse_genes/ST1 - original_expression.csv',
+    #    './mouse_genes/batches.csv',
+    #    './mouse_genes/labels.csv'
+    #),
+    #'pbmc': BermudaDataset('./pbmc/pbmc8k_seurat.csv'),
+    #'pancreas': PbmcDataset('./pancreas/muraro_seurat.csv')
 }
 
 parser = argparse.ArgumentParser(description="A way to define variables for \
@@ -61,6 +62,14 @@ cfg = Config()
 with Experiment('', cfg) as exp:
     if args.metrics_dir:
         cfg.metrics_dir = args.metrics_dir
+    if args.custom_config:
+        try:
+            spec = importlib.util.spec_from_file_location(args.custom_config)
+            config_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(config_module)
+            cfg = config_module.Config()
+        except:
+            raise ValueError(f"Cannot import config module from {args.custom_config}")
 
     for log_name, dataset in datasets.items():
         for bench_func, epoch in zip(benchmark_functions, epochs):
