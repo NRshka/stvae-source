@@ -16,10 +16,7 @@ from config import Config
 from experiment import Experiment
 from model.autoencoders import VAE
 
-from benchmark_scvi import benchmark_scvi
-from benchmark_stvae import benchmark_stvae
-from benchmark_scgen import benchmark_scgen
-from benchmark_trvae import benchmark_trvae
+from benchmark import *
 
 from customDatasets import MouseDataset, PbmcDataset
 from scvi.dataset import (
@@ -28,14 +25,23 @@ from scvi.dataset import (
 )
 
 
+benchmark_functions = (
+    benchmark_stvae,
+    benchmark_scvi,
+    benchmark_scgen,
+    benchmark_trvae
+)
+epochs = (600, 100, 100, 300)
 datasets = {
     'retina': RetinaDataset,
     'starmap': PreFrontalCortexStarmapDataset,
-    #'mouse': MouseDataset(
-    #    './mouse_genes/ST1 - original_expression.csv',
-    #    './mouse_genes/batches.csv',
-    #    './mouse_genes/labels.csv'
-    #)
+    'mouse': MouseDataset(
+        './mouse_genes/ST1 - original_expression.csv',
+        './mouse_genes/batches.csv',
+        './mouse_genes/labels.csv'
+    ),
+    'pbmc': BermudaDataset('./pbmc/pbmc8k_seurat.csv'),
+    'pancreas': PbmcDataset('./pancreas/muraro_seurat.csv')
 }
 
 parser = argparse.ArgumentParser(description="A way to define variables for \
@@ -57,8 +63,8 @@ with Experiment('', cfg) as exp:
         cfg.metrics_dir = args.metrics_dir
 
     for log_name, dataset in datasets.items():
-        data = dataset()
-        data = predefined_preprocessing(data, framework='scvi')
-        #import pdb
-        #pdb.set_trace()
-        benchmark_trvae(data, log_name, cfg)
+        for bench_func, epoch in zip(benchmark_functions, epochs):
+            cfg.epochs = epoch
+            data = dataset()
+            data = predefined_preprocessing(data, framework='scvi')
+            bench_func(data, log_name, cfg)
