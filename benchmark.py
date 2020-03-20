@@ -19,6 +19,7 @@ from model.autoencoders import VAE
 from benchmark_scvi import benchmark_scvi
 from benchmark_stvae import benchmark_stvae
 from benchmark_scgen import benchmark_scgen
+from benchmark_trvae import benchmark_trvae
 
 from customDatasets import MouseDataset, PbmcDataset
 from scvi.dataset import (
@@ -58,6 +59,6 @@ with Experiment('', cfg) as exp:
     for log_name, dataset in datasets.items():
         data = dataset()
         data = predefined_preprocessing(data, framework='scvi')
-        import pdb
-        pdb.set_trace()
-        benchmark_scgen(data, log_name, cfg)
+        #import pdb
+        #pdb.set_trace()
+        benchmark_trvae(data, log_name, cfg)
