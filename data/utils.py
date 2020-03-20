@@ -30,7 +30,7 @@ def add_noise(expr: ndarray, beta: float = 1.0):
     return res
 
 
-def get_raw_data(directory: Path, preprocessing=None):
+def get_raw_data(directory: Path, preprocessing=None, indices=False):
     '''preprocess - callable'''
     assert callable(preprocessing) or preprocessing is None
     original_expr_df = pd.read_csv(directory.joinpath('ST1 - original_expression.csv'), index_col=0)
@@ -40,10 +40,13 @@ def get_raw_data(directory: Path, preprocessing=None):
     expression = original_expr_df.to_numpy()
     class_ohe = pd.get_dummies(transfer_annot_df['Init state']).to_numpy()
     cell_type = pd.get_dummies(transfer_annot_df['Cell type']).to_numpy()
+    cell_indices = list(original_expr_df.index)
 
     if preprocessing:
         expression = preprocessing(expression)
         class_ohe = preprocessing(class_ohe)
         cell_type = preprocessing(cell_type)
 
+    if indices:
+        return expression, class_ohe, cell_type, cell_indices
     return expression, class_ohe, cell_type
