@@ -15,8 +15,9 @@ from test_script import test
 from config import Config
 from experiment import Experiment
 from model.autoencoders import VAE
-import benchmark_scvi
+
 from benchmark_scvi import benchmark_scvi
+from benchmark_stvae import benchmark_stvae
 
 from customDatasets import MouseDataset, PbmcDataset
 from scvi.dataset import (
@@ -28,11 +29,11 @@ from scvi.dataset import (
 datasets = {
     'retina': RetinaDataset,
     'starmap': PreFrontalCortexStarmapDataset,
-    'mouse': partial(MouseDataset,
-                     './mouse_genes/ST1 - original_expression.csv',
-                     './mouse_genes/batches.csv',
-                     './mouse_genes/labels.csv'
-                     )
+    #'mouse': MouseDataset(
+    #    './mouse_genes/ST1 - original_expression.csv',
+    #    './mouse_genes/batches.csv',
+    #    './mouse_genes/labels.csv'
+    #)
 }
 
 parser = argparse.ArgumentParser(description="A way to define variables for \
@@ -56,4 +57,6 @@ with Experiment('', cfg) as exp:
     for log_name, dataset in datasets.items():
         data = dataset()
         data = predefined_preprocessing(data, framework='scvi')
-        benchmark_scvi(data, log_name, cfg)
+        #import pdb
+        #pdb.set_trace()
+        benchmark_stvae(data, log_name, cfg)
