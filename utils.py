@@ -185,7 +185,7 @@ def load_datasets(cfg, test: bool = False, annot: bool = False,
 
         result += tuple((annot_dataloader_train, annot_dataloader_test))
 
-    if indices:
+    if not indices is None:
         result += tuple((train_ind, test_ind))
 
     return result
@@ -263,6 +263,8 @@ def predefined_preprocessing(data, framework: str,
                             Supported values are {''.join(_supported_formats)}")
 
     if data_format == 'scvi':
+        if framework == 'scvi':
+            return data
         data = scvi_anndata(data)
     elif data_format == 'raw':
         pass
@@ -279,6 +281,8 @@ def predefined_preprocessing(data, framework: str,
 
             data = make_anndata(data[0], **_keys)
         elif isinstance(data, GeneExpressionDataset):
+            if framework == 'scvi':
+                return data
             data = scvi_anndata(data)
         elif isinstance(data, sc.AnnData):
             pass
