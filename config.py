@@ -4,7 +4,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from numpy import inf
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 
 @dataclass
@@ -48,8 +48,9 @@ class Config:
     celltype_clf_wdecay: float = 0#weight decay
     form_clf_wdecay: float = 0#weight decay
 
-    experiment_dir: Path = Path('./data/experiment')
-    data_dir: Path = Path('./genes')
+    experiment_dir: Union[Path, str] = Path('./data/experiment')
+    data_dir: Union[Path, str] = Path('./genes')
+    metrics_dir: Union[Path, str] = Path('./metrics')
     best_loss = inf
     early_stop_epochs: int = 30#Number of epochs to wait if no loss improvement and then stop the training.
     use_cuda: bool = True
@@ -57,6 +58,7 @@ class Config:
     cuda: bool = True
     reproducibility: bool = True
     verbose: str = 'all'
+    device_ids: Tuple[int] = (2,)
 
     def __str__(self):
         return '\n'.join([f"{key}: {value}" for key, value in self.__dict__.items()])
