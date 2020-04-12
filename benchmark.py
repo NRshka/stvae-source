@@ -22,8 +22,6 @@ from benchmarkst import (
     benchmark_trvae,
     benchmark_stvae
 )
-import pdb
-pdb.set_trace()
 
 
 BENCHMARK_FUNCTIONS = (
