@@ -11,7 +11,7 @@ from torch.optim import Adam
 
 from model import RAdam
 from ranger import Ranger
-from model.losses import get_variational_loss, mmd_criterion
+from model.losses import VariationalLoss, mmd_criterion
 from data.utils import create_random_classes, add_noise
 
 
