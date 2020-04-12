@@ -56,24 +56,23 @@ def mmd_criterion(x, y, use_cuda=True, mu=1, sigma=1e-6):
     return loss
 
 
-def get_variational_loss(vae_beta: float, rec_coef: float = 1.):
-    def loss_function(recon_x, x, mu, logvar):
+class VariationalLoss:
+    def __init__(vae_beta: float, rec_coef: float = 1.):
+        self.reconstruction_loss = MSELoss(reduction='mean')
+        self.vae_beta = vae_beta
+        self.rec_coef = rec_coef
+
+    def __call__(recon_x, x, mu, logvar):
         '''
         Reconstruction + KL divergence losses summed over all elements and batch.
         '''
         #BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
-        rec_loss_ = loss_function.reconstruction_loss(recon_x, x)
+        rec_loss_ = self.reconstruction_loss(recon_x, x)
         # see Appendix B from VAE paper:
         # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
         # https://arxiv.org/abs/1312.6114
         # 0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
         KLD = -0.5 * mean(1 + logvar - mu.pow(2) - logvar.exp())
 
-        return loss_function.rec_coef*rec_loss_ + loss_function.vae_beta*KLD
-
-    loss_function.reconstruction_loss = MSELoss(reduction='mean')
-    loss_function.vae_beta = vae_beta
-    loss_function.rec_coef = rec_coef
-
-    return loss_function
+        return self.rec_coef*rec_loss_ + self.vae_beta*KLD
 

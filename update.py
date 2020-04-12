@@ -34,7 +34,7 @@ class VAEUpdater:
         self.model_scheduler =  CosineAnnealingLR(self.optimizer, 5) #ExponentialLR(self.optimizer, gamma=cfg.model_scheduler_gamma)
         self.latent_discrim_scheduler = ExponentialLR(self.optimizer_discrim, gamma=cfg.discr_scheduler_gamma)
 
-        self.loss_function = get_variational_loss(self.cfg.vae_beta, 1.)
+        self.loss_function = VariationalLoss(self.cfg.vae_beta, 1.)
         self.discrim_loss = NLLLoss()
 
         self.form_consistency_loss = CrossEntropyLoss()
