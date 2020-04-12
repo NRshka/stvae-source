@@ -275,11 +275,11 @@ def predefined_preprocessing(data: Sized, framework: str,
             _keys = ('batch_index', 'cell_info', 'variables_info')
             anndata_arguments = {_keys[i]: data[i + 1] for i in range(len(data))}
             if len(data) > 1:
-                _keys['batch_name'] = 'condition'
+                anndata_arguments['batch_name'] = 'condition'
             if len(data) > 2:
-                _keys['cell_info_name'] = 'cell_type'
+                anndata_arguments['cell_info_name'] = 'cell_type'
 
-            data = make_anndata(data[0], **_keys)
+            data = make_anndata(data[0], **anndata_arguments)
         elif isinstance(data, GeneExpressionDataset):
             if framework == 'scvi':
                 return data
