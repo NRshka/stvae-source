@@ -7,12 +7,12 @@ from torch import LongTensor
 
 import math
 import torch
-from torch.optim.optimizer import Optimizer, required
+from torch.optim.optimizer import Optimizer
 
 class BatchSwapNoise(Module):
     '''
     Swap Noise module
-    
+
     :param p: float, probability
     '''
 

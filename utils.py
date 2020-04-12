@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections import Iterable, Sized
 from typing import Union, Optional
 import logging
 import pickle
@@ -239,7 +239,7 @@ def scvi_anndata(dataset_class):
                         ds.labels, "cell_type")
 
 
-def predefined_preprocessing(data, framework: str,
+def predefined_preprocessing(data: Sized, framework: str,
                              data_format: Optional[str] = 'adaptive'):
     '''Prepare for any supported frameworks
     :Param data: data of supoorted type [scanpy.Anndata,
