@@ -147,7 +147,7 @@ class VAEUpdater:
 
 class Validator:
     def __init__(self, model, discriminator, vae_beta, cuda=False, device=None):
-        self.loss_function = get_variational_loss(vae_beta)
+        self.loss_function = VariationalLoss(vae_beta)
         self.model = model
         self.latent_discrim = discriminator
         self.cuda = cuda
@@ -214,7 +214,7 @@ class trVAEUpdater:
         self.cuda = cuda
         self.optimizer = Adam(self.model.parameters(), lr = self.cfg.lr)
         self.device = device
-        self.vae_loss = get_variational_loss(cfg.vae_beta, cfg.rec_coef)
+        self.vae_loss = VariationalLoss(cfg.vae_beta, cfg.rec_coef)
 
     def __call__(self, engine, batch):
         expression, ohe = _prepare_batch(batch, device=self.device)
