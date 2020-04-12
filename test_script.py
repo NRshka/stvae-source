@@ -117,8 +117,8 @@ def train_classifiers(cfg, annot_dataloader, count_celltypes, count_classes,
     return celltype_clf, form_clf
 
 def test(cfg, vae_model, discrim, annot_dataloader,
-         test_expression: np.ndarray = None,
-         class_ohe_test = None, celltype_test = None,
+         test_expression: np.ndarray,
+         class_ohe_test, celltype_test,
          pretrained_classifiers=None, dataset_name: str = '') -> Dict[str, Union[float, str, None]]:
     '''Calculate metrics and return dict
         :Param cfg: Config dataclass
@@ -230,7 +230,6 @@ def test(cfg, vae_model, discrim, annot_dataloader,
         transfered_latents_np = transfered_latents.cpu().detach().numpy()
 
     # entropy batch mixing
-    '''
     ebm_score = {}
     ebm_score['test'] = [0. for i in range(1)]
     ebm_score['transfered'] = [0. for i in range(1)]
@@ -262,10 +261,8 @@ def test(cfg, vae_model, discrim, annot_dataloader,
     # KNN Purity
     test_purity = []
     transfered_purity = []
-    #for i in tqdm(range(2, 501)):
     test_purity.append(get_knn_purity(test_latents_np, celltype_test.argmax(1)))
     transfered_purity.append(get_knn_purity(transfered_latents_np, target_classes_transfer.argmax(dim=1).cpu().numpy()))
-    '''
 
     print('\n')
 
