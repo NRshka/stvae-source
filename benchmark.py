@@ -1,13 +1,14 @@
 import argparse
 import importlib
+from pathlib import Path
 
 from scvi.dataset import (
     PreFrontalCortexStarmapDataset,
-    RetinaDataset
+    RetinaDataset,
+    CsvDataset
 )
 
 from customDatasets import (
-    MouseDataset,
     BermudaDataset
 )
 from utils import (
@@ -24,6 +25,8 @@ from benchmarkst import (
 )
 
 
+DIRPATH = Path('./').absolute()
+
 BENCHMARK_FUNCTIONS = (
     benchmark_stvae,
     benchmark_scvi,
@@ -31,16 +34,23 @@ BENCHMARK_FUNCTIONS = (
     benchmark_trvae
 )
 EPOCHS = (600, 100, 100, 300)
+
 datasets = {
-    'pbmc': BermudaDataset('./pbmc/pbmc8k_seurat.csv'),
-    'pancreas': BermudaDataset('./pancreas/muraro_seurat.csv'),
+    'pbmc': CsvDataset(
+        str(DIRPATH / './pbmc/expression.csv'),
+        labels_file = str(DIRPATH / './pbmc/labels.csv'),
+        batch_ids_file = str(DIRPATH / './pbmc/batches.csv'),
+        gene_by_cell = False
+    ),
+    'mouse': CsvDataset(
+        str(DIRPATH / './mouse_genes/ST1 - original_expression.csv'),
+        labels_file = str(DIRPATH / './mouse_genes/labels.csv'),
+        batch_ids_file = str(DIRPATH / './mouse_genes/batches.csv'),
+        gene_by_cell = False
+    ),
+    #'pancreas': BermudaDataset('./pancreas/muraro_seurat.csv'),
     'retina': RetinaDataset,
     'starmap': PreFrontalCortexStarmapDataset,
-    'mouse': MouseDataset(
-        './mouse_genes',
-        'batches.csv',
-        'labels.csv'
-    ),
 }
 
 parser = argparse.ArgumentParser(description="A way to define variables for \
@@ -72,6 +82,6 @@ with Experiment('', cfg) as exp:
     for log_name, dataset in datasets.items():
         for bench_func, epoch in zip(BENCHMARK_FUNCTIONS, EPOCHS):
             cfg.epochs = epoch
-            data = dataset()
-            data = predefined_preprocessing(data, framework='scvi')
+            #data = predefined_preprocessing(dataset, framework='scvi')
+            data = dataset
             bench_func(data, log_name, cfg)
