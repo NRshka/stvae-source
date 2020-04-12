@@ -19,7 +19,7 @@ from data.utils import create_random_classes, add_noise
 
 class VAEUpdater:
     '''
-
+    Class contains one iteration of learning loop.
     '''
     def __init__(self, vae_model, disc, cfg, device=None, cuda=False):
         self.cfg = cfg
