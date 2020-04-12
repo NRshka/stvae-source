@@ -57,12 +57,12 @@ def mmd_criterion(x, y, use_cuda=True, mu=1, sigma=1e-6):
 
 
 class VariationalLoss:
-    def __init__(vae_beta: float, rec_coef: float = 1.):
+    def __init__(self, vae_beta: float, rec_coef: float = 1.):
         self.reconstruction_loss = MSELoss(reduction='mean')
         self.vae_beta = vae_beta
         self.rec_coef = rec_coef
 
-    def __call__(recon_x, x, mu, logvar):
+    def __call__(self, recon_x, x, mu, logvar):
         '''
         Reconstruction + KL divergence losses summed over all elements and batch.
         '''
