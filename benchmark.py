@@ -17,7 +17,7 @@ from config import Config
 from experiment import Experiment
 from model.autoencoders import VAE
 
-from benchmark import *
+from benchmarkst import *
 
 from customDatasets import MouseDataset, PbmcDataset
 from scvi.dataset import (
@@ -35,14 +35,14 @@ benchmark_functions = (
 epochs = (600, 100, 100, 300)
 datasets = {
     'retina': RetinaDataset,
-    'starmap': PreFrontalCortexStarmapDataset
-    #'mouse': MouseDataset(
-    #    './mouse_genes/ST1 - original_expression.csv',
-    #    './mouse_genes/batches.csv',
-    #    './mouse_genes/labels.csv'
-    #),
-    #'pbmc': BermudaDataset('./pbmc/pbmc8k_seurat.csv'),
-    #'pancreas': PbmcDataset('./pancreas/muraro_seurat.csv')
+    'starmap': PreFrontalCortexStarmapDataset,
+    'mouse': MouseDataset(
+        './mouse_genes/ST1 - original_expression.csv',
+        './mouse_genes/batches.csv',
+        './mouse_genes/labels.csv'
+    ),
+    'pbmc': BermudaDataset('./pbmc/pbmc8k_seurat.csv'),
+    'pancreas': PbmcDataset('./pancreas/muraro_seurat.csv')
 }
 
 parser = argparse.ArgumentParser(description="A way to define variables for \
@@ -77,3 +77,4 @@ with Experiment('', cfg) as exp:
             data = dataset()
             data = predefined_preprocessing(data, framework='scvi')
             bench_func(data, log_name, cfg)
+

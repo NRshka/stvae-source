@@ -10,5 +10,5 @@ before_install:
     cd ..
 python: 3.6
 script:
-    python train_script.py
+    python benchmark.py
     
