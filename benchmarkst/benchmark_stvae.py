@@ -2,7 +2,6 @@ from utils import load_datasets, get_high_variance_genes, scvi_anndata
 from train_script import train
 from test_script import test
 from config import Config
-from customDatasets import MouseDataset, PbmcDataset
 from experiment import Experiment
 from model.autoencoders import VAE
 from data import get_raw_data
@@ -21,15 +20,6 @@ from functools import partial
 from pathlib import Path
 import gc
 
-
-
-print('Loading data...')
-
-path = '/home/mrowl/mouse_expr/source'
-MouseExpressionDataset = partial(MouseDataset, Path(path) / 'genes')
-PBMCDataset = partial(PbmcDataset, Path(path) / 'BERMUDA/pbmc/pbmc8k_seurat.csv')
-PancreasDataset = partial(PbmcDataset, Path(path) / 'BERMUDA/pancreas/muraro_seurat.csv')
-save_path = 'scvai_data/'
 
 def benchmark_stvae(dataset, log_name, cfg, **kwargs):
     ds = dataset

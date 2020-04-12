@@ -5,7 +5,6 @@ from train_script import train
 from test_script import test, train_classifiers
 from config import Config
 from experiment import Experiment
-from customDatasets import MouseDataset, PbmcDataset, ScratchDataset
 
 from scvi.dataset import (
     PreFrontalCortexStarmapDataset,

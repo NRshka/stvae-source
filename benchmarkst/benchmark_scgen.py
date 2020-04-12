@@ -4,7 +4,6 @@ from train_script import train
 from test_script import test
 from config import Config
 from model.trvae import trVAE
-from customDatasets import MouseDataset, PbmcDataset
 from experiment import Experiment
 
 from scvi.dataset import (

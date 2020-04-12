@@ -4,7 +4,6 @@ from train_script import train
 from test_script import test
 from config import Config
 from model.trvae import trVAE
-from customDatasets import MouseDataset, PbmcDataset
 from experiment import Experiment
 
 from scvi.dataset import (
@@ -14,8 +13,6 @@ from scvi.dataset import (
                     HematoDataset,
                     AnnDatasetFromAnnData
                   )
-from scvi.models import SCANVI, VAE
-from scvi.inference import UnsupervisedTrainer, JointSemiSupervisedTrainer, SemiSupervisedTrainer
 import os
 import json
 import numpy as np
