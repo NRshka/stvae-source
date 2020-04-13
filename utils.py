@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 
 from data import get_raw_data, make_anndata
+from customDatasets import ScratchDataset
 
 
 def save_pickle(obj, filename):
@@ -252,7 +253,7 @@ def predefined_preprocessing(data: Sized, framework: str,
     '''
 
     _supported_formats = ['adaptive', 'raw', 'scvi', 'anndata']
-    _supported_frameworks = ['stvae', 'scvi', 'scgen']
+    _supported_frameworks = ['stvae', 'scvi', 'scgen', 'trvae']
     framework = framework.lower()
 
     if not framework in _supported_frameworks:
@@ -262,14 +263,32 @@ def predefined_preprocessing(data: Sized, framework: str,
         raise ValueError(f"{data_format} is not supported. \
                             Supported values are {''.join(_supported_formats)}")
 
-    if data_format == 'scvi':
+    def scvi_format(data, framework):
         if framework == 'scvi':
             return data
-        data = scvi_anndata(data)
-    elif data_format == 'raw':
-        pass
-    elif data_format == 'adaptive':
-        if isinstance(data, Iterable):
+        elif framework == 'stvae':
+            expression = np.log(data.X + 1.)
+            return ScratchDataset(
+                expression,
+                data.batch_indices,
+                data.labels
+            )
+        data = scvi_anndata(data) # trvae and scgen
+        return data
+
+    def raw_format(data, framework):
+        if framework == 'scvi':
+            pass # find a way to make scvi dataset from scratch by native classes
+        elif framework == 'stvae':
+            if len(data) != 3:
+                raise ValueError(f"Exprected data len = 3, got {len(data)}")
+            expression = np.log(data[0] + 1.)
+            return ScratchDataset(
+                expression,
+                data[1], # batch indices
+                data[2]  # label indices
+            )
+        elif framework in ('scgen', 'trvae'):
             if len(data) < 1:
                 raise ValueError("Data must not be empty")
             _keys = ('batch_index', 'cell_info', 'variables_info')
@@ -279,16 +298,23 @@ def predefined_preprocessing(data: Sized, framework: str,
             if len(data) > 2:
                 anndata_arguments['cell_info_name'] = 'cell_type'
 
-            data = make_anndata(data[0], **anndata_arguments)
-        elif isinstance(data, GeneExpressionDataset):
-            if framework == 'scvi':
-                return data
-            data = scvi_anndata(data)
-        elif isinstance(data, sc.AnnData):
-            pass
+            return make_anndata(data[0], **anndata_arguments)
+
+    if data_format == 'scvi':
+        data = scvi_format(data, framework)
+    elif data_format == 'raw':
+        data = raw_format(data, framework)
+    # do anndata
+    elif data_format == 'adaptive':
+        # Attention: GeneExpressionDataset is Sized
+        if isinstance(data, GeneExpressionDataset):
+            data = scvi_format(data, framework)
+        elif isinstance(data, Iterable):
+            data = raw_format(data, framework)
         else:
-            raise TypeError(f"Unrecognized type of data: {type(data)}")
-    if framework == 'scgen':
+            raise TypeError(f"Unrecognized data type: {type(data)}")
+        # do AnnData
+    if framework in ('scgen', 'trvae'):
         sc.pp.normalize_per_cell(data)
         sc.pp.log1p(data)
 
