@@ -20,7 +20,7 @@ class CsvDataset:
         self.X = expression_df.to_numpy()
         self.nb_genes = self.X.shape[1]
 
-    def filter(self, expression_df, labels_df, batches_df):
+    def filter(self, expression_df, batches_df, labels_df):
         for checking in (self.labels, self.batch_indices):
             labels, counts = np.unique(checking, return_counts=True)
             for idx, count in enumerate(counts):
@@ -84,6 +84,6 @@ class MouseDataset(CsvDataset):
         batches_df = pd.read_csv(batch_filename, index_col=0)
         assert all(expression_df.index == batches_df.index)
 
-        dfs = (expression_df, labels_df, batches_df)
+        dfs = (expression_df, batches_df, labels_df)
         self.assign(*dfs)
         self.filter(*dfs)
