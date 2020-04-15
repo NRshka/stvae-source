@@ -5,6 +5,7 @@ from pathlib import Path
 from scvi.dataset import (
     PreFrontalCortexStarmapDataset,
     RetinaDataset,
+    PbmcDataset,
     CsvDataset
 )
 
@@ -33,10 +34,18 @@ BENCHMARK_FUNCTIONS = (
     benchmark_scgen,
     benchmark_trvae
 )
-EPOCHS = (600, 100, 100, 300)
+FRAMEWORKS = (
+    'stvae',
+    'scvi',
+    'scgen',
+    'trvae'
+)
+#EPOCHS = (600, 100, 100, 300)
+EPOCHS = (1, 1, 1, 1)
 
 datasets = {
-    'pbmc': CsvDataset(
+    'scvi_pbmc': PbmcDataset(),
+    'bermuda_pbmc': CsvDataset(
         str(DIRPATH / './pbmc/expression.csv'),
         labels_file = str(DIRPATH / './pbmc/labels.csv'),
         batch_ids_file = str(DIRPATH / './pbmc/batches.csv'),
@@ -49,8 +58,8 @@ datasets = {
         gene_by_cell = False
     ),
     #'pancreas': BermudaDataset('./pancreas/muraro_seurat.csv'),
-    'retina': RetinaDataset,
-    'starmap': PreFrontalCortexStarmapDataset,
+    'retina': RetinaDataset(),
+    'starmap': PreFrontalCortexStarmapDataset(),
 }
 
 parser = argparse.ArgumentParser(description="A way to define variables for \
@@ -80,8 +89,10 @@ with Experiment('', cfg) as exp:
             raise ValueError(f"Cannot import config module from {args.custom_config}")
 
     for log_name, dataset in datasets.items():
-        for bench_func, epoch in zip(BENCHMARK_FUNCTIONS, EPOCHS):
+        for bench_func, epoch, framework in zip(BENCHMARK_FUNCTIONS,
+                                                EPOCHS,
+                                                FRAMEWORKS):
             cfg.epochs = epoch
-            #data = predefined_preprocessing(dataset, framework='scvi')
-            data = dataset
+            data = predefined_preprocessing(dataset, framework=framework)
+            #data = dataset
             bench_func(data, log_name, cfg)
