@@ -1,3 +1,6 @@
 mouse_genes/ST1[[:space:]]-[[:space:]]original_expression.csv filter=lfs diff=lfs merge=lfs -text
 mouse_genes/labels.csv filter=lfs diff=lfs merge=lfs -text
 mouse_genes/batches.csv filter=lfs diff=lfs merge=lfs -text
+pbmc/expression.csv filter=lfs diff=lfs merge=lfs -text
+pbmc/batches.csv filter=lfs diff=lfs merge=lfs -text
+pbmc/labels.csv filter=lfs diff=lfs merge=lfs -text
