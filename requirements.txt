@@ -5,7 +5,7 @@ dataclasses==0.7
 numpy==1.18.2
 pandas==1.0.3
 typing==3.7.4.1
-tensorboardX
+tensorboardX==1.7
 scikit-learn
 scipy
 scvi
