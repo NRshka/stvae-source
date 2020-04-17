@@ -1,5 +1,5 @@
 dataclasses==0.7
-torch
+torch==1.4.0
 pytorch-ignite
 dataclasses==0.7
 numpy
