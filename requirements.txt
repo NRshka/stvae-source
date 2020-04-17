@@ -1,7 +1,7 @@
-dataclasses
+dataclasses==0.7
 torch
 pytorch-ignite
-dataclasses
+dataclasses==0.7
 numpy
 pandas
 typing
