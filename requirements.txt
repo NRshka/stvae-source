@@ -2,7 +2,7 @@ dataclasses==0.7
 torch==1.4.0
 pytorch-ignite==0.3.0
 dataclasses==0.7
-numpy==1.18.2
+numpy==1.18.3
 pandas==1.0.3
 typing==3.7.4.1
 tensorboardX==2.0
