@@ -7,7 +7,7 @@ pandas==1.0.3
 typing==3.7.4.1
 tensorboardX==2.0
 scikit-learn==0.22.2.post1
-scipy==1.4.1
+scipy==1.11.0
 scvi==0.6.4
 scanpy==1.4.6
 ranger==0.10
