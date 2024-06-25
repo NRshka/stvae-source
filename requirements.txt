@@ -9,6 +9,6 @@ tensorboardX==2.0
 scikit-learn==0.22.2.post1
 scipy==1.4.1
 scvi==0.6.4
-scanpy==1.4.6
+scanpy==1.10.2
 ranger==0.10
 scgen==1.1.4
